@@ -8,7 +8,7 @@ p1 = -0.93240737 #setup for Figure 8 periodic system
 p2 = -0.86473146
 global m = [1. 1. 1.] #Masses
 dt = 1e-5 #timestep of integration
-t_end = 1 #integration end
+t_end = 10 #integration end
 period = 6.32591398 #calculated period
 
 r = zeros(Float128,(3,2)) #initialize arrays for positions and velocities as Float128
@@ -25,7 +25,7 @@ for i in 1:3,j in 1:2 #read position and velocity data into Float128 arrays
 end
 intr = r #save initial positions and velocities
 intv = v
-results=hcat(reshape(r,(1,6)),zeros(Float128,(1,5))) #initialize array for results
+results=hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),zeros(Float128,(1,5))) #initialize array for results
 
 function cross(x,y) #cross product given 2d vectors (only considering 2d space)
     return x[1]*y[2]-x[2]*y[1]
@@ -54,18 +54,18 @@ function error(intr,intv,r,v,m,e0,m0,a0)
     linear_m = [0,0]
     angular_m = 0
     perror = [0. 0. 0. 0. 0. 0.] #periodicity error
-    for x in 1:3
-        energy += 0.5*m[x]*v[x,:]'*v[x,:]
-        linear_m += m[x]*v[x,:]
-        angular_m += cross(r[x,:],(m[x]*v[x,:]))
-        perror[x] = sqrt((intr[x,:]-r[x,:])'*(intr[x,:]-r[x,:])) #calculate distance from original state
-        perror[x+3] = sqrt((intr[x,:]-r[x,:])'*(intr[x,:]-r[x,:]))
-        for y in x+1:3
-            xy = r[x,:]-r[y,:]
-            energy -= m[x]*m[y]/sqrt(xy'*xy)
+    for i in 1:3
+        energy += 0.5*m[i]*v[i,:]'*v[i,:] #kinetic energy
+        linear_m += m[i]*v[i,:] #linear momentum
+        angular_m += cross(r[i,:],(m[i]*v[i,:])) #angular momentum
+        perror[i] = sqrt((intr[i,:]-r[i,:])'*(intr[i,:]-r[i,:])) #difference from original position
+        perror[i+3] = sqrt((intv[i,:]-v[i,:])'*(intv[i,:]-v[i,:])) #difference from original velocity
+        for j in i+1:3
+            ij = r[j,:]-r[i,:]
+            energy -= m[j]*m[i]/sqrt(ij'*ij)
         end
     end
-    return [1e18*energy/e0-1e18 1e18*sqrt((linear_m-m0)'*(linear_m-m0)) 1e18*angular_m/a0-1e18 maximum(perror)] #return error
+    return [1e18*energy/e0-1e18 1e18*sqrt((linear_m-m0)'*(linear_m-m0)) 1e18*sqrt((angular_m-a0)'*(angular_m-a0)) maximum(perror)] #return error
 end
 
 
@@ -156,7 +156,7 @@ function eval(r, v, dt, t_end, results,e0,m0,a0)
                 beta = (vij'*vij + rij'*taij)/r2 + alpha^2
                 sij = m[j] * taij / r3 - 6*alpha*jkij - 3*beta*aij
                 s[i,:] += sij
-                s[j,:] -= sij
+                s[j,:] -= sij * m[i] / m[j]
                 gamma = (3*vij'*taij + rij'*tjkij)/r2 + alpha*(3*beta-4*alpha^2)
                 c[i,:] += m[j] * tjkij / r3 - 9*alpha*sij - 9*beta*jkij - 3*gamma*aij
                 c[j,:] -= m[i] * tjkij / r3 - 9*alpha*sij - 9*beta*jkij - 3*gamma*aij
@@ -169,7 +169,7 @@ function eval(r, v, dt, t_end, results,e0,m0,a0)
         
         step += 1
         if step % 100 == 1 #record results once every 100 timesteps
-            new = hcat(reshape(r,(1,6)),hcat(t,error(intr,intv,r,v,m,e0,m0,a0)))
+            new = hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),hcat(t,error(intr,intv,r,v,m,e0,m0,a0)))
             results = vcat(results,new)
             println("t=",t)
         end
@@ -186,11 +186,12 @@ end
 
 
 using Plots
+title = plot(title=string("6 Order Hermite, dt =",dt),ticks=false, labels=false, grid = false, showaxis = false, bottom_margin = -100Plots.px)
 results = eval(r, v, dt, t_end, results,e0,m0,a0)
-bodies = plot(results[:,1:3],results[:,4:6],title="System")
-energy = plot(results[:,7],results[:,8],title="Energy Error (1e18)")
-linear_m = plot(results[:,7],results[:,9],title="Linear Momentum Error (1e18)")
-angular_m = plot(results[:,7],results[:,10],title="Angular Momentum Error (1e18)")
-periodicity = plot(results[:,7],results[:,11],title="Periodicity Error")
-plot(bodies,energy,linear_m,angular_m,periodicity,layout=(5,1),title=string("6 Order Hermite, dt =",dt))
+bodies = plot(results[:,1:3],results[:,4:6],title="System",label=["Body 1" "Body 2" "Body 3"])
+energy = plot(results[:,13],results[:,14],title="Energy Error (1e18)",legend=false)
+linear_m = plot(results[:,13],results[:,15],title="Linear Momentum Error (1e18)",legend=false)
+angular_m = plot(results[:,13],results[:,16],title="Angular Momentum Error (1e18)",legend=false)
+periodicity = plot(results[:,13],results[:,17],title="Periodicity Error",legend=false)
+plot(title,bodies,energy,linear_m,angular_m,periodicity,layout=(6,1),size=(500,1000))
 savefig("6Order.png")
