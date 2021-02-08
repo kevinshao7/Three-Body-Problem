@@ -8,7 +8,7 @@ p1 = -0.93240737 #setup for Figure 8 periodic system
 p2 = -0.86473146
 global m = [1. 1. 1.] #Masses
 dt = 1e-5 #timestep of integration
-t_end = 10 #integration end
+t_end = 1 #integration end
 period = 6.32591398 #calculated period
 
 r = zeros(Float128,(3,2)) #initialize arrays for positions and velocities as Float128
@@ -122,6 +122,8 @@ function eval(r, v, dt, t_end, results,e0,m0,a0)
         #predictor (Taylor series)
         pr = r + v*dt + a*(dt^2)/2 + jk*(dt^3)/6 + s*(dt^4)/24 + c*(dt^5)/120
         pv = v + a*dt + jk*(dt^2)/2 + s*(dt^3)/6 + c*(dt^4)/24
+        pa = a + jk*dt + s*(dt^2)/2 + c*(dt^3)/6
+        pjk = jk + s*dt + c*(dt^2)/2
         
         #calculate new acceleration etc. at new predicted position
         a = zeros(Float128,(3,2))
@@ -140,18 +142,8 @@ function eval(r, v, dt, t_end, results,e0,m0,a0)
                 aij = m[j] * rij / r3
                 jk[i,:] += m[j] * vij / r3 - 3*alpha*aij
                 jk[j,:] -= m[i] * vij / r3 - 3*alpha*aij
-            end
-        end
-        for i in 1:3
-            for j in i+1:3 
-                rij = pr[j,:]-pr[i,:] 
-                vij = pv[j,:]-pv[i,:]
-                r2 = rij'*rij
-                r3 = r2*sqrt(r2)
-                taij = a[j,:]-a[i,:]
-                tjkij = jk[j,:]-jk[i,:]
-                aij = m[j] * rij / r3
-                alpha = (rij'*vij)/r2
+                taij = pa[j,:]-pa[i,:]
+                tjkij = pjk[j,:]-pjk[i,:]
                 jkij= m[j] * vij / r3 - 3*alpha*aij
                 beta = (vij'*vij + rij'*taij)/r2 + alpha^2
                 sij = m[j] * taij / r3 - 6*alpha*jkij - 3*beta*aij
@@ -186,12 +178,20 @@ end
 
 
 using Plots
+s = 1
+e = 1000
 title = plot(title=string("6 Order Hermite, dt =",dt),ticks=false, labels=false, grid = false, showaxis = false, bottom_margin = -100Plots.px)
 results = eval(r, v, dt, t_end, results,e0,m0,a0)
-bodies = plot(results[:,1:3],results[:,4:6],title="System",label=["Body 1" "Body 2" "Body 3"])
-energy = plot(results[:,13],results[:,14],title="Energy Error (1e18)",legend=false)
-linear_m = plot(results[:,13],results[:,15],title="Linear Momentum Error (1e18)",legend=false)
-angular_m = plot(results[:,13],results[:,16],title="Angular Momentum Error (1e18)",legend=false)
-periodicity = plot(results[:,13],results[:,17],title="Periodicity Error",legend=false)
-plot(title,bodies,energy,linear_m,angular_m,periodicity,layout=(6,1),size=(500,1000))
+bodies = plot(results[s:e,1:3],results[s:e,4:6],title="System",linewidth = 3)
+velocities = plot(results[s:e,7:9],results[s:e,10:12],title="Velocities",linewidth = 3)
+energy = plot(results[:,13],results[:,14],title="Energy Error (1e18)",legend=false,linewidth = 3)
+linear_m = plot(results[:,13],results[:,15],title="Linear Momentum Error (1e18)",legend=false,linewidth = 3)
+angular_m = plot(results[:,13],results[:,16],title="Angular Momentum Error (1e18)",legend=false,linewidth = 3)
+periodicity = plot(results[:,13],results[:,17],title="Periodicity Error",legend=false,linewidth = 3)
+plot(title,bodies,velocities,energy,linear_m,angular_m,periodicity,layout=(7,1),size=(500,1000))
 savefig("6Order.png")
+
+using CSV
+using DataFrames
+df = convert(DataFrame,results)
+CSV.write("6OrderInertial.csv",df)
