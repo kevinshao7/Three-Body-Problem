@@ -69,13 +69,13 @@ function error(r,v,m,m0,sum_mass,e0,a0)
     energy -= m[1]*m[3]/sqrt(r[1,:]'*r[1,:]) #potential energy
     energy -= m[2]*m[3]/sqrt(r[2,:]'*r[2,:])
     energy -= m[1]*m[2]/sqrt(rij'*rij)
-    return [1e18*energy/e0-1e18 1e18*sqrt((angular_m-a0)'*(angular_m-a0)) maximum(perror)]
+    return hcat(hcat(reshape(inertial_r,(1,6)),reshape(inertial_v,(1,6))),[1e18*energy/e0-1e18 1e18*sqrt((angular_m-a0)'*(angular_m-a0)) maximum(perror)])
 end
 
 
 
 
-function eval(r, v, dt, t_end)
+function run(r, v, dt, t_end)
     e0,m0,a0 = initialize(r,v,m)
     results=hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),zeros((1,4))) #initialize results array
     for i in 1:3,j in 1:2 #convert positions and velocities into relative perspective of body 3
@@ -246,15 +246,7 @@ function eval(r, v, dt, t_end)
         step +=1
         if step % 100 == 1
             #conversion to inertial frame
-            iv = zeros(Float128,(3,2))
-            ir = zeros(Float128,(3,2))
-            iv[3,:] = (m0 - m[2]*v[2,:] - m[1]*v[1,:])/sum_mass #derived from conservation of momentum
-            iv[2,:] = v[2,:] + iv[3,:]
-            iv[1,:] = v[1,:] + iv[3,:]
-            ir[3,:] -= (m[1]*r[1,:]+m[2]*r[2,:])/sum_mass #find centre of mass
-            ir[2,:] = r[2,:] + ir[3,:]
-            ir[1,:] = r[1,:] + ir[3,:]
-            new = hcat(hcat(reshape(ir,(1,6)),reshape(iv,(1,6))),hcat(t,error(r,v,m,m0,sum_mass,e0,a0)))
+            new = hcat(t,error(r,v,m,m0,sum_mass,e0,a0))
             results = vcat(results,new)
             println("t=",t)
         end
@@ -266,15 +258,15 @@ end
 using Plots
 
 
-results = eval(r,v,dt,t_end)
+results = run(r,v,dt,t_end)
 s = 1
 e = 1000
 title = plot(title=string("6 Order Hermite Relative, dt =",dt),ticks=false, labels=false,grid = false, showaxis = false, bottom_margin = -100Plots.px)
-system = plot(results[s:e,1:3],results[s:e,4:6],title="System",linewidth = 3)
-velocities = plot(results[s:e,7:9],results[s:e,10:12],title="Velocities",linewidth = 3)
-energy = plot(results[:,13],results[:,14],title="Energy Error (1e18)",linewidth = 3)
-angular_m = plot(results[:,13],results[:,15],title="Angular Momentum Error (1e18)",linewidth = 3)
-periodicity = plot(results[:,13],results[:,16],title="Max Periodicity Error",linewidth = 3)
+system = plot(results[s:e,2:4],results[s:e,5:7],title="System",linewidth = 3)
+velocities = plot(results[s:e,8:10],results[s:e,11:13],title="Velocities",linewidth = 3)
+energy = plot(results[:,1],results[:,14],title="Energy Error (1e18)",linewidth = 3)
+angular_m = plot(results[:,1],results[:,15],title="Angular Momentum Error (1e18)",linewidth = 3)
+periodicity = plot(results[:,1],results[:,16],title="Max Periodicity Error",linewidth = 3)
 plot(title,system,velocities,energy,angular_m,periodicity,layout=(6,1),size=(500,1000))
 savefig("6OrderRelative.png")
 
