@@ -391,26 +391,26 @@ addprocs(4)
 for  i in 3:6 #1000 up to 1,000,000 steps
     t_end=dt*10^i
     for  j in 1:10
-        a = remotecall_fetch(runR,1, r, v, m, dt, t_end)
-        b = remotecall_fetch(runR,2, r, v, m, dt, t_end)
-        c = remotecall_fetch(runR,3, r, v, m, dt, t_end)
-        d = remotecall_fetch(runR,4, r, v, m, dt, t_end)
+        a = remotecall(runR,1, r, v, m, dt, t_end)
+        b = remotecall(runR,2, r, v, m, dt, t_end)
+        c = remotecall(runR,3, r, v, m, dt, t_end)
+        d = remotecall(runR,4, r, v, m, dt, t_end)
         
-        Results[j,(i-2)*2-1] = a
-        Results[j+10,(i-2)*2-1] = b
-        Results[j+20,(i-2)*2-1] = c
-        Results[j+30,(i-2)*2-1] = d
+        Results[j,(i-2)*2-1] = fetch(a)
+        Results[j+10,(i-2)*2-1] = fetch(b)
+        Results[j+20,(i-2)*2-1] = fetch(c)
+        Results[j+30,(i-2)*2-1] = fetch(d)
     end
     println("1e",i,"step Relative done")
     for  j in 1:10
-        a = remotecall_fetch(runI,1, r, v, m, dt, t_end)
-        b = remotecall_fetch(runI,2, r, v, m, dt, t_end)
-        c = remotecall_fetch(runI,3, r, v, m, dt, t_end)
-        d = remotecall_fetch(runI,4, r, v, m, dt, t_end)
-        Results[j,(i-2)*2] = a
-        Results[j+10,(i-2)*2] = b
-        Results[j+20,(i-2)*2] = c
-        Results[j+30,(i-2)*2] = d
+        a = remotecall(runI,1, r, v, m, dt, t_end)
+        b = remotecall(runI,2, r, v, m, dt, t_end)
+        c = remotecall(runI,3, r, v, m, dt, t_end)
+        d = remotecall(runI,4, r, v, m, dt, t_end)
+        Results[j,(i-2)*2] = fetch(a)
+        Results[j+10,(i-2)*2] = fetch(b)
+        Results[j+20,(i-2)*2] = fetch(c)
+        Results[j+30,(i-2)*2] = fetch(d)
     end
     println("1e",i,"step Inertial done")
     dataframe = convert(DataFrame,Results)
