@@ -7,7 +7,7 @@ using Quadmath
 p1 = -0.93240737 #setup for Figure 8 periodic system
 p2 = -0.86473146
 global m = [1. 1. 1.] #Masses
-dt = 1e-3 #timestep of integration
+dt = 1e-5 #timestep of integration
 t_end = 1 #integration end
 period = 6.32591398 #calculated period
 
@@ -47,9 +47,7 @@ function initialize(r,v,m) #calculate initial energy and momentum
     return e0, m0, a0
 end
 
-e0, m0, a0 = initialize(r,v,m) #calculate initial quantities
-
-function error(intr,intv,r,v,m,e0,m0,a0)
+function InertialError(intr,intv,r,v,m,e0,m0,a0)
     energy = 0 #initialize values
     linear_m = [0,0]
     angular_m = 0
@@ -69,7 +67,14 @@ function error(intr,intv,r,v,m,e0,m0,a0)
 end
 
 
-function run(r, v, dt, t_end, results,e0,m0,a0)
+
+
+function Inertial(r, v, m, dt, t_end)
+    intr = r
+    intv = v
+    e0, m0, a0 = initialize(r,v,m) #calculate initial quantities
+    results=hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),zeros(Float128,(1,5))) #initialize array for results
+    resolution = convert(Int64, round((t_end/dt)/1000, digits=0))#1000 datapoints per sim
     local a = zeros(Float128,(3,2)) #initialize variables
     local jk = zeros(Float128,(3,2))
     local s = zeros(Float128,(3,2))
@@ -159,19 +164,13 @@ function run(r, v, dt, t_end, results,e0,m0,a0)
         v = old_v + (old_a + a)*dt/2 + ((old_jk - jk)*dt^2)/10 + ((old_s + s)*dt^3)/120
         r = old_r + (old_v + v)*dt/2 + ((old_a - a)*dt^2)/10 + ((old_jk + jk)*dt^3)/120
         
-        step += 1
-        if step % 100 == 1 #record results once every 100 timesteps
-            new = hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),hcat(t,error(intr,intv,r,v,m,e0,m0,a0)))
+        
+        if step % resolution == 0 #record results once every 100 timesteps
+            new = hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),hcat(t,InertialError(intr,intv,r,v,m,e0,m0,a0)))
             results = vcat(results,new)
             println("t=",t)
         end
-        if t==t_end #print end results
-            println(v)
-            println(r)
-            endv = v
-            endr = r
-        end
-        
+        step += 1
     end
     return results
 end
@@ -181,7 +180,7 @@ using Plots
 s = 1
 e = 12
 title = plot(title=string("6 Order Hermite, dt =",dt),ticks=false, labels=false, grid = false, showaxis = false, bottom_margin = -100Plots.px)
-results = run(r, v, dt, t_end, results,e0,m0,a0)
+results = Inertial(r, v, m, dt, t_end)
 bodies = plot(results[s:e,1:3],results[s:e,4:6],title="System",linewidth = 3)
 velocities = plot(results[s:e,7:9],results[s:e,10:12],title="Velocities",linewidth = 3)
 energy = plot(results[:,13],results[:,14],title="Energy Error (1e18)",legend=false,linewidth = 3)

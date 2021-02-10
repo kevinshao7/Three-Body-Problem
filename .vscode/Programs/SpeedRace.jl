@@ -1,15 +1,4 @@
-#Kevin Shao Feb 2, 2021
-#Credit 6th and 8th Order Hermite Integrator for N-body Simulations
-
-using Quadmath
-
-#starting conditions
-p1 = -0.93240737
-p2 = -0.86473146
-m = [1. 1. 1.] #masses
-sum_mass = m[1]+m[2]+m[3]
-dt = 1e-5 #timestep
-t_end = 1 #time end
+dt = 1e-5
 r = zeros(Float128,(3,2)) #initialize positions and vectors as Float128
 v = zeros(Float128,(3,2))
 intr = [0.970040	-0.24309; #data
@@ -22,7 +11,6 @@ for i in 1:3,j in 1:2 #read data into Float128 arrays (Julia is finnicky in this
     r[i,j]=intr[i,j]
     v[i,j]=intv[i,j]
 end
-
 
 function cross(x,y) #cross product given 2d vectors (only considering 2d space), used to calculate angular momentum
     return x[1]*y[2]-x[2]*y[1]
@@ -42,9 +30,6 @@ function initialize(r,v,m) #calculate initial energy and momentum
     end
     return e0,m0,a0
 end
-
-
-
 
 function RelativeError(r,v,m,m0,sum_mass,e0,a0)
     energy = 0
@@ -72,10 +57,7 @@ function RelativeError(r,v,m,m0,sum_mass,e0,a0)
     return hcat(hcat(reshape(inertial_r,(1,6)),reshape(inertial_v,(1,6))),[1e18*energy/e0-1e18 1e18*sqrt((angular_m-a0)'*(angular_m-a0)) maximum(perror)])
 end
 
-
-
-
-function Relative(r, v, m, dt, t_end)
+function Relative(r, v, dt, t_end)
     e0,m0,a0 = initialize(r,v,m)
     results=hcat(hcat([0],hcat(reshape(r,(1,6))),hcat(reshape(v,(1,6))),zeros((1,3)))) #initialize results array
     resolution = convert(Int64, round((t_end/dt)/1000, digits=0))#1000 datapoints per sim
@@ -240,22 +222,138 @@ function Relative(r, v, m, dt, t_end)
     end
     return results
 end
-using Plots
+
+function InertialError(intr,intv,r,v,m,e0,m0,a0)
+    energy = 0 #initialize values
+    linear_m = [0,0]
+    angular_m = 0
+    perror = [0. 0. 0. 0. 0. 0.] #periodicity error
+    for i in 1:3
+        energy += 0.5*m[i]*v[i,:]'*v[i,:] #kinetic energy
+        linear_m += m[i]*v[i,:] #linear momentum
+        angular_m += cross(r[i,:],(m[i]*v[i,:])) #angular momentum
+        perror[i] = sqrt((intr[i,:]-r[i,:])'*(intr[i,:]-r[i,:])) #difference from original position
+        perror[i+3] = sqrt((intv[i,:]-v[i,:])'*(intv[i,:]-v[i,:])) #difference from original velocity
+        for j in i+1:3
+            ij = r[j,:]-r[i,:]
+            energy -= m[j]*m[i]/sqrt(ij'*ij)
+        end
+    end
+    return [1e18*energy/e0-1e18 1e18*sqrt((linear_m-m0)'*(linear_m-m0)) 1e18*sqrt((angular_m-a0)'*(angular_m-a0)) maximum(perror)] #return error
+end
+
+function Inertial(r, v, m, dt, t_end)
+    intr = r
+    intv = v
+    e0, m0, a0 = initialize(r,v,m) #calculate initial quantities
+    results=hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),zeros(Float128,(1,5))) #initialize array for results
+    resolution = convert(Int64, round((t_end/dt)/1000, digits=0))#1000 datapoints per sim
+    local a = zeros(Float128,(3,2)) #initialize variables
+    local jk = zeros(Float128,(3,2))
+    local s = zeros(Float128,(3,2))
+    local c = zeros(Float128,(3,2))
+    for i in 1:3 #loop through pairs of bodies (1,2), (1,3), (2,3)
+        for j in i+1:3 
+            rij = r[j,:]-r[i,:] #relative positions
+            vij = v[j,:]-v[i,:] #relative velocities
+            r2 = rij'*rij 
+            r3 = r2*sqrt(r2)
+            aij = m[j] * rij / r3 #acceleration of i to j
+            a[i,:] += aij #calculate acceleration of body i
+            a[j,:] -= m[i]*aij/m[j] #body j
+            alpha = (rij'*vij)/r2 #see paper for coefficients alpha, beta, and gamma
+            jk[i,:] += m[j] * vij / r3 - 3*alpha*aij  #calculate jerk of body i
+            jk[j,:] -= m[i] * vij / r3 - 3*alpha*aij #body j
+        end
+    end
+    #break out of loop (acceleration and jerk must be totalled before calculating higher order derivatives)
+    for i in 1:3
+        for j in i+1:3 
+            rij = r[j,:]-r[i,:] 
+            vij = v[j,:]-v[i,:]
+            r2 = rij'*rij
+            r3 = r2*sqrt(r2)
+            taij = a[j,:]-a[i,:] #relative acceleration
+            tjkij = jk[j,:]-jk[i,:] #relative jerk
+            aij = m[j] * rij / r3 #acceleration i to j
+            alpha = (rij'*vij)/r2
+            jkij= m[j] * vij / r3 - 3*alpha*aij #jerk i to j
+            beta = (vij'*vij + rij'*taij)/r2 + alpha^2
+            sij = m[j] * taij / r3 - 6*alpha*jkij - 3*beta*aij #snap i to j
+            s[i,:] += sij #calculate snape of body i
+            s[j,:] -= sij #body j
+            gamma = (3*vij'*taij + rij'*tjkij)/r2 + alpha*(3*beta-4*alpha^2)
+            c[i,:] += m[j] * tjkij / r3 - 9*alpha*sij - 9*beta*jkij - 3*gamma*aij #crackle of body i
+            c[j,:] -= m[i] * tjkij / r3 - 9*alpha*sij - 9*beta*jkij - 3*gamma*aij #body j
+        end
+    end
+    
+    #main loop
+    step = 0 #initialize step counter
+    for t in 0:dt:t_end
+        old_r = r #save old values
+        old_v = v
+        old_a = a
+        old_jk = jk
+        old_s = s
+        old_c = c
+        #predictor (Taylor series)
+        pr = r + v*dt + a*(dt^2)/2 + jk*(dt^3)/6 + s*(dt^4)/24 + c*(dt^5)/120
+        pv = v + a*dt + jk*(dt^2)/2 + s*(dt^3)/6 + c*(dt^4)/24
+        pa = a + jk*dt + s*(dt^2)/2 + c*(dt^3)/6
+        pjk = jk + s*dt + c*(dt^2)/2
+        
+        #calculate new acceleration etc. at new predicted position
+        a = zeros(Float128,(3,2))
+        jk = zeros(Float128,(3,2))
+        s = zeros(Float128,(3,2))
+        c = zeros(Float128,(3,2))
+        for i in 1:3
+            for j in i+1:3 
+                rij = pr[j,:]-pr[i,:] 
+                vij = pv[j,:]-pv[i,:]
+                r2 = rij'*rij
+                r3 = r2*sqrt(r2)
+                a[i,:] += m[j] * rij / r3
+                a[j,:] -= m[i] * rij / r3
+                alpha = (rij'*vij)/r2
+                aij = m[j] * rij / r3
+                jk[i,:] += m[j] * vij / r3 - 3*alpha*aij
+                jk[j,:] -= m[i] * vij / r3 - 3*alpha*aij
+                taij = pa[j,:]-pa[i,:]
+                tjkij = pjk[j,:]-pjk[i,:]
+                jkij= m[j] * vij / r3 - 3*alpha*aij
+                beta = (vij'*vij + rij'*taij)/r2 + alpha^2
+                sij = m[j] * taij / r3 - 6*alpha*jkij - 3*beta*aij
+                s[i,:] += sij
+                s[j,:] -= sij * m[i] / m[j]
+                gamma = (3*vij'*taij + rij'*tjkij)/r2 + alpha*(3*beta-4*alpha^2)
+                c[i,:] += m[j] * tjkij / r3 - 9*alpha*sij - 9*beta*jkij - 3*gamma*aij
+                c[j,:] -= m[i] * tjkij / r3 - 9*alpha*sij - 9*beta*jkij - 3*gamma*aij
+            end
+        end
+
+        #corrector (see paper for more details)
+        v = old_v + (old_a + a)*dt/2 + ((old_jk - jk)*dt^2)/10 + ((old_s + s)*dt^3)/120
+        r = old_r + (old_v + v)*dt/2 + ((old_a - a)*dt^2)/10 + ((old_jk + jk)*dt^3)/120
+        
+        
+        if step % resolution == 0 #record results once every 100 timesteps
+            new = hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),hcat(t,InertialError(intr,intv,r,v,m,e0,m0,a0)))
+            results = vcat(results,new)
+            println("t=",t)
+        end
+        step += 1
+    end
+    return results
+end
 
 
-results = Relative(r,v,dt,t_end)
-s = 1
-e = 100
-title = plot(title=string("6 Order Hermite Relative, dt =",dt),ticks=false, labels=false,grid = false, showaxis = false, bottom_margin = -100Plots.px)
-system = plot(results[s:e,2:4],results[s:e,5:7],title="System",linewidth = 3)
-velocities = plot(results[s:e,8:10],results[s:e,11:13],title="Velocities",linewidth = 3)
-energy = plot(results[:,1],results[:,14],title="Energy Error (1e18)",linewidth = 3)
-angular_m = plot(results[:,1],results[:,15],title="Angular Momentum Error (1e18)",linewidth = 3)
-periodicity = plot(results[:,1],results[:,16],title="Max Periodicity Error",linewidth = 3)
-plot(title,system,velocities,energy,angular_m,periodicity,layout=(6,1),size=(500,1000))
-savefig("6OrderRelative.png")
+for i in 3:6 #1000 up to 1,000,000 steps
+    t_end=1
+    #t_end=dt*10^i
+    @time(Relative(r, v, m, dt, t_end))
+    @time(Inertial(r, v, m, dt, t_end))
 
-using CSV
-using DataFrames
-df = convert(DataFrame,results)
-CSV.write("6OrderRelative.csv",df)
+
+end

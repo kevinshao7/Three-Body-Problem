@@ -77,7 +77,7 @@ end
 
 function run(r, v, dt, t_end)
     e0,m0,a0 = initialize(r,v,m)
-    results=hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),zeros((1,4))) #initialize results array
+    results=hcat(hcat([0],hcat(reshape(r,(1,6))),hcat(reshape(v,(1,6))),zeros((1,3)))) #initialize results array
     for i in 1:3,j in 1:2 #convert positions and velocities into relative perspective of body 3
         r[i,j]-=r[3,j]
         v[i,j]-=v[3,j]
