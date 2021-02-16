@@ -1,7 +1,7 @@
 using Distributed
 using DistributedArrays
 using SharedArrays
-using Quadmath
+@everywhere using Quadmath
 #specify cores using command -p 4
 
 #best estimate
@@ -24,17 +24,17 @@ end
 
 
 #algorithms
-function periodicity(r,v,intr, intv)
-    perror = zeros(Float128, (1,6)) #periodicity error
-    for i in 1:3
+@everywhere function periodicity(r,v,intr, intv)
+    perror = zeros(Float128, (1,4)) #periodicity error
+    for i in 1:2
         perror[i] = sqrt((intr[i,:]-r[i,:])'*(intr[i,:]-r[i,:])) #calculate distance from original state
-        perror[i+3] = sqrt((intv[i,:]-v[i,:])'*(intv[i,:]-v[i,:]))
+        perror[i+2] = sqrt((intv[i,:]-v[i,:])'*(intv[i,:]-v[i,:]))
     end
     return maximum(perror)
 end
 
-function run(r, v, dt, t_end, resolution)
-    periodicity=[0] #initialize results array
+@everywhere function run(r, v, m, dt, t_end, resolution)
+    results=[0] #initialize results array (periodicity)
     for i in 1:3,j in 1:3 #convert positions and velocities into relative perspective of body 3
         r[i,j]-=r[3,j]
         v[i,j]-=v[3,j]
@@ -211,7 +211,7 @@ end
 addprocs(4)
 
 #creat searchtable i 1:11, j 1:11, k 1:11 
-function search_table() 
+@everywhere function search_table() 
     searchtable = [0 0 0]
     for i in -5:5
         for j in -5:5
@@ -237,7 +237,7 @@ using DataFrames
 function phase1_am(r,v,m)
     am_results = zeros(Float128, (2000,1)) #initialize results array
     for i in 1:500
-
+        angular_momentum = 0.1+(i-1)*1e-4 #ranges from 0.1 to 0.1499
         core1_v = v #initialize core positions 
         core1_v[2,3] += angular_momentum 
         core1_v[3,3] -= angular_momentum
@@ -251,10 +251,6 @@ function phase1_am(r,v,m)
         core4_v[2,3] += angular_momentum + 0.15
         core4_v[3,3] -= angular_momentum + 0.15
         
-        core1_r[body,:] += 10^-(depth+1)*searchtable[i,:] #grid search parameters
-        core2_r[body,:] += 10^-(depth+1)*searchtable[i+332,:]
-        core3_r[body,:] += 10^-(depth+1)*searchtable[i+664,:]
-        core4_r[body,:] += 10^-(depth+1)*searchtable[i+996,:]
 
         #period ~ 6.32591
         core1 = remotecall(run,1, r, core1_v, m, 1e-3, 6.325, 1000) #coarse simulation
@@ -463,3 +459,5 @@ function phase3_v(r,v,m)#refine velocities
     println("DONE")
     println("Phase 3 Velocities:",v)
 end
+
+phase1_am(r,v,m)
