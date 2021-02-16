@@ -7,8 +7,8 @@ using Quadmath
 p1 = -0.93240737 #setup for Figure 8 periodic system
 p2 = -0.86473146
 global m = [1. 1. 1.] #Masses
-dt = 1e-5 #timestep of integration
-t_end = 1 #integration end
+dt = 1e-7 #timestep of integration
+t_end = 0.5271595 #integration end
 period = 6.32591398 #calculated period
 
 r = zeros(Float128,(3,2)) #initialize arrays for positions and velocities as Float128
@@ -74,7 +74,7 @@ function Inertial(r, v, m, dt, t_end)
     intv = v
     e0, m0, a0 = initialize(r,v,m) #calculate initial quantities
     results=hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),zeros(Float128,(1,5))) #initialize array for results
-    resolution = convert(Int64, round((t_end/dt)/1000, digits=0))#1000 datapoints per sim
+    resolution = convert(Int64, round((t_end/dt)/100, digits=0))#100 datapoints per sim
     local a = zeros(Float128,(3,2)) #initialize variables
     local jk = zeros(Float128,(3,2))
     local s = zeros(Float128,(3,2))
@@ -166,6 +166,11 @@ function Inertial(r, v, m, dt, t_end)
         
         
         if step % resolution == 0 #record results once every 100 timesteps
+            new = hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),hcat(t,InertialError(intr,intv,r,v,m,e0,m0,a0)))
+            results = vcat(results,new)
+            println("t=",t)
+        end
+        if step*dt == t_end #return results at end
             new = hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),hcat(t,InertialError(intr,intv,r,v,m,e0,m0,a0)))
             results = vcat(results,new)
             println("t=",t)
