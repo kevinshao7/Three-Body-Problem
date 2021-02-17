@@ -35,6 +35,8 @@ end
 
 @everywhere function run(r, v, m, dt, t_end, resolution, intr, intv)
     results=[0] #initialize results array (periodicity)
+    m0 = m[1]*v[1,:]+m[2]*v[2,:]+m[3]*v[3,:] #system momentum
+
     for i in 1:3,j in 1:3 #convert positions and velocities into relative perspective of body 3
         r[i,j]-=r[3,j]
         v[i,j]-=v[3,j]
@@ -200,6 +202,7 @@ end
     end
     inertial_v = zeros(Float128,(3,3)) #velocity in inertial frame
     inertial_r = zeros(Float128,(3,3)) #positions in inertial frame
+    sum_mass = m[1]+m[2]+m[3]
     #convert to inertial
     inertial_v[3,:] = (m0 - m[2]*v[2,:] - m[1]*v[1,:])/sum_mass #derived from conservation of momentum
     inertial_v[2,:] = v[2,:] + inertial_v[3,:]
@@ -208,7 +211,7 @@ end
     inertial_r[2,:] = r[2,:] + inertial_r[3,:]
     inertial_r[1,:] = r[1,:] + inertial_r[3,:]
 
-    return minimum(results[2:end]), inetial_r, inertial_v
+    return minimum(results[2:end]), inertial_r, inertial_v
 end
 
 
