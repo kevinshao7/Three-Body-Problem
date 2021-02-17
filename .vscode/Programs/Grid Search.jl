@@ -33,17 +33,12 @@ end
     return maximum(perror)
 end
 
-@everywhere function run(r, v, m, dt, t_end, resolution)
+@everywhere function run(r, v, m, dt, t_end, resolution, intr, intv)
     results=[0] #initialize results array (periodicity)
-    for i in 1:3,j in 1:3 #convert positions and velocities into relative perspective of body 3
-        r[i,j]-=r[3,j]
-        v[i,j]-=v[3,j]
-    end 
+    
     r = r[1:2,:] #discard data of body 3 (should be zero anyway)
     v = v[1:2,:]
-    intr = r
-    intv = v
-
+    
     local a = zeros(Float128,(2,3))
     local jk = zeros(Float128,(2,3))
     local s = zeros(Float128,(2,3))
@@ -241,42 +236,50 @@ function phase1_am(r,v,m)
         core1_v = v #initialize core positions 
         core1_v[2,3] += angular_momentum 
         core1_v[3,3] -= angular_momentum
+        core1_intv = core1_v
+
         core2_v = v 
         core2_v[2,3] += angular_momentum + 0.05
         core2_v[3,3] -= angular_momentum + 0.05
+        core2_intv = core2_v
+
         core3_v = v 
         core3_v[2,3] += angular_momentum + 0.1
         core3_v[3,3] -= angular_momentum + 0.1
+        core3_intv = core3_v
+
         core4_v = v 
         core4_v[2,3] += angular_momentum + 0.15
         core4_v[3,3] -= angular_momentum + 0.15
+        core4_intv = core4_v
         
 
         #period ~ 6.32591
-        core1 = remotecall(run,1, r, core1_v, m, 1e-3, 6.325, 1000) #coarse simulation
-        core2 = remotecall(run,2, r, core2_v, m, 1e-3, 6.325, 1000)
-        core3 = remotecall(run,3, r, core3_v, m, 1e-3, 6.325, 1000)
-        core4 = remotecall(run,4, r, core4_v, m, 1e-3, 6.325, 1000)
+        coarse1 = remotecall(run,1, r, core1_v, m, 1e-3, 6.325, 1000, r, core1_intv) #coarse simulation
+        coarse2 = remotecall(run,2, r, core2_v, m, 1e-3, 6.325, 1000, r, core2_intv)
+        coarse3 = remotecall(run,3, r, core3_v, m, 1e-3, 6.325, 1000, r, core3_intv)
+        coarse4 = remotecall(run,4, r, core4_v, m, 1e-3, 6.325, 1000, r, core4_intv)
 
-        core1_p, core1_r, core1_v = fetch(core1) #fetch coarse
-        core2_p, core2_r, core2_v = fetch(core2)
-        core3_p, core3_r, core3_v = fetch(core3)
-        core4_p, core4_r, core4_v = fetch(core4)
+        core1_p, core1_r, core1_v = fetch(coarse1) #fetch coarse
+        core2_p, core2_r, core2_v = fetch(coarse2)
+        core3_p, core3_r, core3_v = fetch(coarse3)
+        core4_p, core4_r, core4_v = fetch(coarse4)
 
-        core1 = remotecall(run,1, core1_r, core1_v, m, 1e-5, 0.001, 1) #fine simulation
-        core2 = remotecall(run,2, core2_r, core2_v, m, 1e-5, 0.001, 1)
-        core3 = remotecall(run,3, core3_r, core3_v, m, 1e-5, 0.001, 1)
-        core4 = remotecall(run,4, core4_r, core4_v, m, 1e-5, 0.001, 1)
+        fine1 = @spawnat 1 run(core1_r, core1_v, m, 1e-5, 0.001, 1, r, core1_intv)#fine simulation
+        fine2 = @spawnat 2 run(core2_r, core2_v, m, 1e-5, 0.001, 1, r, core2_intv)
+        fine3 = @spawnat 3 run(core3_r, core3_v, m, 1e-5, 0.001, 1, r, core3_intv)
+        fine4 = @spawnat 4 run(core4_r, core4_v, m, 1e-5, 0.001, 1, r, core4_intv)
 
-        core1_p, core1_r, core1_v = fetch(core1) #fetch fine
-        core2_p, core2_r, core2_v = fetch(core2)
-        core3_p, core3_r, core3_v = fetch(core3)
-        core4_p, core4_r, core4_v = fetch(core4)
+        fine1_p, core1_r, core1_v = fetch(fine1) #fetch coarse
+        fine2_p, core2_r, core2_v = fetch(fine2)
+        fine3_p, core3_r, core3_v = fetch(fine3)
+        fine4_p, core4_r, core4_v = fetch(fine4)
 
-        am_results[1,i] = core1_p #save periodicity error into results
-        am_results[1,i+500] = core2_p
-        am_results[1,i+1000] = core3_p
-        am_results[1,i+1500] = core4_p
+        am_results[i,1] = core1_p #save periodicity error into results
+        am_results[i+500,1] = core2_p
+        am_results[i+1000,1] = core3_p
+        am_results[i+1500,1] = core4_p
+        println("Progress =",i,"/500")
     end
     println("DONE")
     println("argmin =",argmin(am_results))
