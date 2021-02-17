@@ -195,7 +195,8 @@ end
 
         
     end
-    return minimum(results), r, v
+    len = length(results)
+    return minimum(results[2:len]), r, v
 end
 
 
@@ -203,7 +204,7 @@ end
 
 
 
-addprocs(4)
+
 
 #creat searchtable i 1:11, j 1:11, k 1:11 
 @everywhere function search_table() 
@@ -230,7 +231,9 @@ using DataFrames
 #refine angular momentum
 #best guess between 0.1 and 0.3
 function phase1_am(r,v,m)
-    am_results = zeros(Float128, (2000,1)) #initialize results array
+    
+    @everywhere results = zeros(Float128, (2000,1)) #initialize results array
+    am_results = SharedArray{Float64}(results)
     for i in 1:500
         angular_momentum = 0.1+(i-1)*1e-4 #ranges from 0.1 to 0.1499
         core1_v = v #initialize core positions 
@@ -256,29 +259,34 @@ function phase1_am(r,v,m)
 
         #period ~ 6.32591
         coarse1 = remotecall(run,1, r, core1_v, m, 1e-3, 6.325, 1000, r, core1_intv) #coarse simulation
-        coarse2 = remotecall(run,2, r, core2_v, m, 1e-3, 6.325, 1000, r, core2_intv)
-        coarse3 = remotecall(run,3, r, core3_v, m, 1e-3, 6.325, 1000, r, core3_intv)
-        coarse4 = remotecall(run,4, r, core4_v, m, 1e-3, 6.325, 1000, r, core4_intv)
+        # coarse2 = remotecall(run,2, r, core2_v, m, 1e-3, 6.325, 1000, r, core2_intv)
+        # coarse3 = remotecall(run,3, r, core3_v, m, 1e-3, 6.325, 1000, r, core3_intv)
+        # coarse4 = remotecall(run,4, r, core4_v, m, 1e-3, 6.325, 1000, r, core4_intv)
 
         core1_p, core1_r, core1_v = fetch(coarse1) #fetch coarse
-        core2_p, core2_r, core2_v = fetch(coarse2)
-        core3_p, core3_r, core3_v = fetch(coarse3)
-        core4_p, core4_r, core4_v = fetch(coarse4)
+        # core2_p, core2_r, core2_v = fetch(coarse2)
+        # core3_p, core3_r, core3_v = fetch(coarse3)
+        # core4_p, core4_r, core4_v = fetch(coarse4)
+
+        # fine1 = remotecall(run, 1, core1_r, core1_v, m, 1e-5, 0.001, 1, r, core1_intv)#fine simulation
+        # fine2 = remotecall(run, 2, core2_r, core2_v, m, 1e-5, 0.001, 1, r, core2_intv)
+        # fine3 = remotecall(run, 3, core3_r, core3_v, m, 1e-5, 0.001, 1, r, core3_intv)
+        # fine4 = remotecall(run, 4, core4_r, core4_v, m, 1e-5, 0.001, 1, r, core4_intv)
 
         fine1 = @spawnat 1 run(core1_r, core1_v, m, 1e-5, 0.001, 1, r, core1_intv)#fine simulation
-        fine2 = @spawnat 2 run(core2_r, core2_v, m, 1e-5, 0.001, 1, r, core2_intv)
-        fine3 = @spawnat 3 run(core3_r, core3_v, m, 1e-5, 0.001, 1, r, core3_intv)
-        fine4 = @spawnat 4 run(core4_r, core4_v, m, 1e-5, 0.001, 1, r, core4_intv)
+        # fine2 = @spawnat 2 run(core2_r, core2_v, m, 1e-5, 0.001, 1, r, core2_intv)
+        # fine3 = @spawnat 3 run(core3_r, core3_v, m, 1e-5, 0.001, 1, r, core3_intv)
+        # fine4 = @spawnat 4 run(core4_r, core4_v, m, 1e-5, 0.001, 1, r, core4_intv)
 
-        fine1_p, core1_r, core1_v = fetch(fine1) #fetch coarse
-        fine2_p, core2_r, core2_v = fetch(fine2)
-        fine3_p, core3_r, core3_v = fetch(fine3)
-        fine4_p, core4_r, core4_v = fetch(fine4)
+        fine1_p, fine1_r, fine1_v = fetch(fine1) #fetch fine
+        # fine2_p, fine2_r, fine2_v = fetch(fine2)
+        # fine3_p, fine3_r, fine3_v = fetch(fine3)
+        # fine4_p, fine4_r, fine4_v = fetch(fine4)
 
-        am_results[i,1] = core1_p #save periodicity error into results
-        am_results[i+500,1] = core2_p
-        am_results[i+1000,1] = core3_p
-        am_results[i+1500,1] = core4_p
+        am_results[i,1] = fine1_p #save periodicity error into results
+        am_results[i+500,1] = fine2_p
+        am_results[i+1000,1] = fine3_p
+        am_results[i+1500,1] = fine4_p
         println("Progress =",i,"/500")
     end
     println("DONE")
@@ -286,7 +294,6 @@ function phase1_am(r,v,m)
     df = convert(DataFrame,am_results)
     CSV.write("Phase1_AM.csv",df)
 end
-
 
 
 function phase2_p(r,v,m)#refine positions
