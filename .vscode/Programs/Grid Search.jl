@@ -35,7 +35,10 @@ end
 
 @everywhere function run(r, v, m, dt, t_end, resolution, intr, intv)
     results=[0] #initialize results array (periodicity)
-    
+    for i in 1:3,j in 1:3 #convert positions and velocities into relative perspective of body 3
+        r[i,j]-=r[3,j]
+        v[i,j]-=v[3,j]
+    end 
     r = r[1:2,:] #discard data of body 3 (should be zero anyway)
     v = v[1:2,:]
     
@@ -195,8 +198,17 @@ end
         step +=1
         
     end
-    
-    return minimum(results[2:end]), r, v
+    inertial_v = zeros(Float128,(3,3)) #velocity in inertial frame
+    inertial_r = zeros(Float128,(3,3)) #positions in inertial frame
+    #convert to inertial
+    inertial_v[3,:] = (m0 - m[2]*v[2,:] - m[1]*v[1,:])/sum_mass #derived from conservation of momentum
+    inertial_v[2,:] = v[2,:] + inertial_v[3,:]
+    inertial_v[1,:] = v[1,:] + inertial_v[3,:]
+    inertial_r[3,:] = -(m[1]*r[1,:]+m[2]*r[2,:])/sum_mass #find centre of mass
+    inertial_r[2,:] = r[2,:] + inertial_r[3,:]
+    inertial_r[1,:] = r[1,:] + inertial_r[3,:]
+
+    return minimum(results[2:end]), inetial_r, inertial_v
 end
 
 
@@ -232,7 +244,7 @@ using DataFrames
 #best guess between 0.1 and 0.3
 function phase1_am(r,v,m)
     
-    @everywhere results = zeros(Float128, (2000,1)) #initialize results array
+    @everywhere results = zeros(Float128, (2000,2)) #initialize results array
     am_results = SharedArray{Float64}(results)
     for i in 1:500
         angular_momentum = (i-1)*1e-4 #ranges from 0 to 0.0499
@@ -263,25 +275,25 @@ function phase1_am(r,v,m)
         coarse3 = remotecall(run,3, r, core3_v, m, 1e-3, 6.325, 1000, r, core3_intv)
         coarse4 = remotecall(run,4, r, core4_v, m, 1e-3, 6.325, 1000, r, core4_intv)
 
-        core1_p, core1_r, core1_v = fetch(coarse1) #fetch coarse
-        core2_p, core2_r, core2_v = fetch(coarse2)
-        core3_p, core3_r, core3_v = fetch(coarse3)
-        core4_p, core4_r, core4_v = fetch(coarse4)
+        coarse1_p, coarse1_r, coarse1_v = fetch(coarse1) #fetch coarse
+        coarse2_p, coarse2_r, coarse2_v = fetch(coarse2)
+        coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
+        coarse4_p, coarse4_r, coarse4_v = fetch(coarse4)
 
-        fine1 = @spawnat 1 run(core1_r, core1_v, m, 1e-5, 0.001, 1, r, core1_intv)#fine simulation
-        fine2 = @spawnat 2 run(core2_r, core2_v, m, 1e-5, 0.001, 1, r, core2_intv)
-        fine3 = @spawnat 3 run(core3_r, core3_v, m, 1e-5, 0.001, 1, r, core3_intv)
-        fine4 = @spawnat 4 run(core4_r, core4_v, m, 1e-5, 0.001, 1, r, core4_intv)
+        fine1 = @spawnat 1 run(coarse1_r, coarse1_v, m, 1e-5, 0.001, 1, r, core1_intv)#fine simulation
+        fine2 = @spawnat 2 run(coarse2_r, coarse2_v, m, 1e-5, 0.001, 1, r, core2_intv)
+        fine3 = @spawnat 3 run(coarse3_r, coarse3_v, m, 1e-5, 0.001, 1, r, core3_intv)
+        fine4 = @spawnat 4 run(coarse4_r, coarse4_v, m, 1e-5, 0.001, 1, r, core4_intv)
 
         fine1_p, fine1_r, fine1_v = fetch(fine1) #fetch fine
         fine2_p, fine2_r, fine2_v = fetch(fine2)
         fine3_p, fine3_r, fine3_v = fetch(fine3)
         fine4_p, fine4_r, fine4_v = fetch(fine4)
 
-        am_results[i,1] = fine1_p #save periodicity error into results
-        am_results[i+500,1] = fine2_p
-        am_results[i+1000,1] = fine3_p
-        am_results[i+1500,1] = fine4_p
+        am_results[i,:] = [angular_momentum fine1_p] #save periodicity error into results
+        am_results[i+500,:] = [(angular_momentum+0.05) fine2_p]
+        am_results[i+1000,:] = [(angular_momentum+0.1) fine3_p]
+        am_results[i+1500,:] = [(angular_momentum+0.15) fine4_p]
         println("Progress =",i,"/500")
     end
     println("DONE")
