@@ -1,4 +1,7 @@
-using Quadmath
+using Distributed
+using DistributedArrays
+using SharedArrays
+@everywhere using Quadmath
 #specify cores using command -p 4
 
 #best estimate
@@ -21,7 +24,11 @@ end
 
 
 #algorithms
-function periodicity(r,v,intr, intv)
+@everywhere function periodicity(r,v,intr, intv)
+    for i in 1:3,j in 1:3 #convert initial positions and velocities into relative perspective of body 3
+        intr[i,j] -= intr[3,j]
+        intv[i,j] -= intv[3,j]
+    end 
     perror = zeros(Float128, (1,4)) #periodicity error
     for i in 1:2
         perror[i] = sqrt((intr[i,:]-r[i,:])'*(intr[i,:]-r[i,:])) #calculate distance from original state
@@ -30,9 +37,14 @@ function periodicity(r,v,intr, intv)
     return maximum(perror)
 end
 
-function run(r, v, m, dt, t_end, resolution, intr, intv)
+@everywhere function run(r, v, m, dt, t_end, resolution, intr, intv)
     results=[0] #initialize results array (periodicity)
-    
+    m0 = m[1]*v[1,:]+m[2]*v[2,:]+m[3]*v[3,:] #system momentum
+
+    for i in 1:3,j in 1:3 #convert positions and velocities into relative perspective of body 3
+        r[i,j]-=r[3,j]
+        v[i,j]-=v[3,j]
+    end 
     r = r[1:2,:] #discard data of body 3 (should be zero anyway)
     v = v[1:2,:]
     
@@ -183,18 +195,30 @@ function run(r, v, m, dt, t_end, resolution, intr, intv)
         v = old_v + (old_a + a)*dt/2 + ((old_jk - jk)*dt^2)/10 + ((old_s + s)*dt^3)/120
         r = old_r + (old_v + v)*dt/2 + ((old_a - a)*dt^2)/10 + ((old_jk + jk)*dt^3)/120
         
-        step +=1
+        
         if step % resolution == 0
             
-            results = vcat(results, [periodicity(r,v,intr, intv)])
+            results = vcat(results, periodicity(r,v,intr, intv))
             println("t=",t)
         end
-
+        step +=1
         
     end
-    len = length(results)
-    return results, r, v
+    inertial_v = zeros(Float128,(3,3)) #velocity in inertial frame
+    inertial_r = zeros(Float128,(3,3)) #positions in inertial frame
+    sum_mass = m[1]+m[2]+m[3]
+    #convert to inertial
+    inertial_v[3,:] = (m0 - m[2]*v[2,:] - m[1]*v[1,:])/sum_mass #derived from conservation of momentum
+    inertial_v[2,:] = v[2,:] + inertial_v[3,:]
+    inertial_v[1,:] = v[1,:] + inertial_v[3,:]
+    inertial_r[3,:] = -(m[1]*r[1,:]+m[2]*r[2,:])/sum_mass #find centre of mass
+    inertial_r[2,:] = r[2,:] + inertial_r[3,:]
+    inertial_r[1,:] = r[1,:] + inertial_r[3,:]
+
+    return results[2:end], inertial_r, inertial_v
 end
 
 
-run(r, v, m, 1e-5, 1, 1, r, v)
+
+results, inertial_r, inertial_v = run(r, v, m, 1e-3, 7, 1, r, v)
+plot(results[:,1],title="Periodicity Error")

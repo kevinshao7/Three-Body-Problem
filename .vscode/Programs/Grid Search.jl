@@ -25,7 +25,7 @@ end
 
 #algorithms
 @everywhere function periodicity(r,v,intr, intv)
-    for i in 1:3,j in 1:3 #convert positions and velocities into relative perspective of body 3
+    for i in 1:3,j in 1:3 #convert initial positions and velocities into relative perspective of body 3
         intr[i,j] -= intr[3,j]
         intv[i,j] -= intv[3,j]
     end 
@@ -287,10 +287,10 @@ function phase1_am(r,v,m)
         coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
         coarse4_p, coarse4_r, coarse4_v = fetch(coarse4)
 
-        fine1 = @spawnat 1 run(coarse1_r, coarse1_v, m, 1e-5, 0.001, 1, r, core1_intv)#fine simulation
-        fine2 = @spawnat 2 run(coarse2_r, coarse2_v, m, 1e-5, 0.001, 1, r, core2_intv)
-        fine3 = @spawnat 3 run(coarse3_r, coarse3_v, m, 1e-5, 0.001, 1, r, core3_intv)
-        fine4 = @spawnat 4 run(coarse4_r, coarse4_v, m, 1e-5, 0.001, 1, r, core4_intv)
+        fine1 = @spawnat 1 run(coarse1_r, coarse1_v, m, 1e-5, 0.01, 1, r, core1_intv)#fine simulation
+        fine2 = @spawnat 2 run(coarse2_r, coarse2_v, m, 1e-5, 0.01, 1, r, core2_intv)
+        fine3 = @spawnat 3 run(coarse3_r, coarse3_v, m, 1e-5, 0.01, 1, r, core3_intv)
+        fine4 = @spawnat 4 run(coarse4_r, coarse4_v, m, 1e-5, 0.01, 1, r, core4_intv)
 
         fine1_p, fine1_r, fine1_v = fetch(fine1) #fetch fine
         fine2_p, fine2_r, fine2_v = fetch(fine2)
