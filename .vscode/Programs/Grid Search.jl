@@ -235,25 +235,25 @@ function phase1_am(r,v,m)
     @everywhere results = zeros(Float128, (2000,1)) #initialize results array
     am_results = SharedArray{Float64}(results)
     for i in 1:500
-        angular_momentum = 0.1+(i-1)*1e-4 #ranges from 0.1 to 0.1499
+        angular_momentum = (i-1)*1e-4 #ranges from 0 to 0.0499
         core1_v = v #initialize core positions 
         core1_v[2,3] += angular_momentum 
         core1_v[3,3] -= angular_momentum
         core1_intv = core1_v
 
         core2_v = v 
-        core2_v[2,3] += angular_momentum + 0.05
-        core2_v[3,3] -= angular_momentum + 0.05
+        core2_v[2,3] += (angular_momentum + 0.05)
+        core2_v[3,3] -= (angular_momentum + 0.05)
         core2_intv = core2_v
 
         core3_v = v 
-        core3_v[2,3] += angular_momentum + 0.1
-        core3_v[3,3] -= angular_momentum + 0.1
+        core3_v[2,3] += (angular_momentum + 0.1)
+        core3_v[3,3] -= (angular_momentum + 0.1)
         core3_intv = core3_v
 
         core4_v = v 
-        core4_v[2,3] += angular_momentum + 0.15
-        core4_v[3,3] -= angular_momentum + 0.15
+        core4_v[2,3] += (angular_momentum + 0.15)
+        core4_v[3,3] -= (angular_momentum + 0.15)
         core4_intv = core4_v
         
 
