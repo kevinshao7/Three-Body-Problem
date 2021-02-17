@@ -25,6 +25,10 @@ end
 
 #algorithms
 @everywhere function periodicity(r,v,intr, intv)
+    for i in 1:3,j in 1:3 #convert positions and velocities into relative perspective of body 3
+        intr[i,j] -= intr[3,j]
+        intv[i,j] -= intv[3,j]
+    end 
     perror = zeros(Float128, (1,4)) #periodicity error
     for i in 1:2
         perror[i] = sqrt((intr[i,:]-r[i,:])'*(intr[i,:]-r[i,:])) #calculate distance from original state
