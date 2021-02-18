@@ -4,26 +4,23 @@
 using Quadmath
 using LinearAlgebra
 
-#starting conditions
-p1 = -0.93240737
-p2 = -0.86473146
-m = [1. 1. 1.] #masses
-sum_mass = m[1]+m[2]+m[3]
-dt = 1e-5 #timestep
-t_end = 1 #time end
+intr = [1.08105966433283395241374390321269010e+00 -1.61103999936333666101824156054682023e-06 0.;
+-5.40556847423408105134957741609652478e-01 3.45281693188283016303154284469911822e-01 0.;
+-5.40508088505425823287375981275225727e-01 -3.45274810552283676957903446556133749e-01 0.]
+intv = [2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.; 
+1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 0.1;
+-1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 -0.1]
+m = [1 1 1]
+dt = 1e-3
+t_end = 100
+sum_mass = 3
+#period ~ 6.325913985
 r = zeros(Float128,(3,3)) #initialize positions and vectors as Float128
 v = zeros(Float128,(3,3))
-intr = [0.970040	-0.24309 0.; #data
--0.97004	0.24309 0.;
-0. 0. 0.]
-intv = [0.46620	0.43237 0.;
-0.46620	0.43237 0.;
--0.93241 -0.86473 0.]
 for i in 1:3,j in 1:3 #read data into Float128 arrays (Julia is finnicky in this way)
     r[i,j]=intr[i,j]
     v[i,j]=intv[i,j]
 end
-
 
 
 function initialize(r,v,m) #calculate initial energy and momentum
@@ -248,17 +245,22 @@ using Plots
 
 results = run(r,v,dt,t_end)
 s = 1
-e = 1000
-title = plot(title=string("6 Order Hermite Relative, dt =",dt),ticks=false, labels=false,grid = false, showaxis = false, bottom_margin = -100Plots.px)
+e = 1002
+title = plot(title=string("6 Order Hermite, dt =",dt),ticks=false, labels=false,grid = false, showaxis = false, bottom_margin = -100Plots.px)
 system = plot(results[s:e,2:4],results[s:e,5:7],results[s:e,8:10],title="System",linewidth = 3)
 velocities = plot(results[s:e,11:13],results[s:e,14:16],results[s:e,17:19],title="Velocities",linewidth = 3)
 energy = plot(results[:,1],results[:,20],title="Energy Error (1e18)",linewidth = 3)
 angular_m = plot(results[:,1],results[:,21],title="Angular Momentum Error (1e18)",linewidth = 3)
-periodicity = plot(results[:,1],results[:,22],title="Max Periodicity Error",linewidth = 3)
-plot(title,system,velocities,energy,angular_m,periodicity,layout=(6,1),size=(500,1000))
+period = plot(results[:,1],results[:,22],title="Max Periodicity Error",linewidth = 3)
+plot(title,system,velocities,energy,angular_m,period,layout=(6,1),size=(500,1000))
 savefig("6Order3D.png")
 
 using CSV
 using DataFrames
 df = convert(DataFrame,results)
 CSV.write("6Order3D.csv",df)
+
+anim = @animate for i in s:e
+    plot(results[s:i,2:4],results[s:i,5:7],results[s:i,8:10],title="System",linewidth = 3)
+end
+gif(anim, "6Order3D.gif", fps = 15)
