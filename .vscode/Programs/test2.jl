@@ -285,7 +285,7 @@ function phase3_v(r,v,m,body,depth)#refine velocities
         v_results[6 .+ searchtable[i,:]] .= fine2_p #save periodicity error into results
         v_results[6 .+ searchtable[i+443,:]] .= fine3_p
         v_results[6 .+ searchtable[i+886,:]] .= fine4_p
-        
+        println("progress = ",i,"/443")
     end
     #cases 1330:1331
     core2_intv = v #initialize core velocities
