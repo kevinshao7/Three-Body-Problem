@@ -406,7 +406,7 @@ function phase3_v(r,v,m)#refine velocities
             #search iteration
             for i in 1:443
                 
-
+        
                 core2_intv = v #initialize core velocities
                 core3_intv = v
                 core4_intv = v
@@ -441,26 +441,28 @@ function phase3_v(r,v,m)#refine velocities
             #cases 1330:1331
             core2_intv = v #initialize core velocities
             core3_intv = v
-
-            core2_v[body,:] += searchtable[1330,:]/10^(depth+1) #grid search parameters
-            core3_v[body,:] += searchtable[1331,:]/10^(depth+1)
-
+        
+            core2_intv[body,:] += searchtable[1330,:]/10^(depth+1) #grid search parameters
+            core3_intv[body,:] += searchtable[1331,:]/10^(depth+1)
+        
             #period ~ 92.8
             coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3, 92.7, 10000, r, core2_intv) #coarse simulation
             coarse3 = remotecall(run,3, r, core3_intv, m, 1e-3, 92.7, 10000, r, core3_intv)
-
+        
             coarse2_p, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
             coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
-
+        
             fine2 = remotecall(run,2, coarse2_r, coarse2_v, m, 1e-4, 0.2, 1, r, core2_intv) #fine simulation
             fine3 = remotecall(run,3, coarse3_r, coarse3_v, m, 1e-4, 0.2, 1, r, core3_intv)
-
+        
             fine2_p, fine2_r, fine2_v = fetch(fine2) #fetch fine
             fine3_p, fine3_r, fine3_v = fetch(fine3)
-
+        
             v_results[1330, 4] = fine2_p #save periodicity error into results
             v_results[1331, 4] = fine3_p
-
+        
+            sleep(2)
+        
             println("DONE Body =",body," Depth =",depth)
             println("argmin =",argmin(v_results[:,4]))
             println("minimum error =",minimum(v_results[:,4]))
@@ -470,7 +472,7 @@ function phase3_v(r,v,m)#refine velocities
             CSV.write(name,df)
             r = argmin(v_results[:,4])
             v[body,:] += searchtable[r,:]/10^(depth+1) #refine position by converging on periodic solution
-
+        
         end
     end
     println("DONE")

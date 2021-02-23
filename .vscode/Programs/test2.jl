@@ -441,8 +441,8 @@ function phase3_v(r,v,m, body, depth)#refine velocities
     core2_intv = v #initialize core velocities
     core3_intv = v
 
-    core2_v[body,:] += searchtable[1330,:]/10^(depth+1) #grid search parameters
-    core3_v[body,:] += searchtable[1331,:]/10^(depth+1)
+    core2_intv[body,:] += searchtable[1330,:]/10^(depth+1) #grid search parameters
+    core3_intv[body,:] += searchtable[1331,:]/10^(depth+1)
 
     #period ~ 92.8
     coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3, 92.7, 10000, r, core2_intv) #coarse simulation
@@ -460,6 +460,8 @@ function phase3_v(r,v,m, body, depth)#refine velocities
     v_results[1330, 4] = fine2_p #save periodicity error into results
     v_results[1331, 4] = fine3_p
 
+    sleep(2)
+
     println("DONE Body =",body," Depth =",depth)
     println("argmin =",argmin(v_results[:,4]))
     println("minimum error =",minimum(v_results[:,4]))
@@ -474,6 +476,7 @@ function phase3_v(r,v,m, body, depth)#refine velocities
     println("Phase 3 Velocities:",v)
 end
 
-
+body = 2
+depth = 1
 
 phase3_v(r,v,m, body, depth)
