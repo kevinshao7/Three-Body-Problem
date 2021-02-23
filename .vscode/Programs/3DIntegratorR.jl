@@ -260,7 +260,7 @@ using DataFrames
 df = convert(DataFrame,results)
 CSV.write("6Order3D.csv",df)
 
-anim = @animate for i in s:e
-    plot(results[s:i,2:4],results[s:i,5:7],results[s:i,8:10],title="System",linewidth = 3)
-end
-gif(anim, "6Order3D.gif", fps = 15)
+# anim = @animate for i in s:e
+#     plot(results[s:i,2:4],results[s:i,5:7],results[s:i,8:10],title="System",linewidth = 3)
+# end
+# gif(anim, "6Order3D.gif", fps = 15)

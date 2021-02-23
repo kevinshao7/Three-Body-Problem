@@ -5,17 +5,17 @@ using SharedArrays
 #specify cores using command -p 4
 
 #best estimate
-intr = [1.08105966433283395241374390321269010e+00 -1.61103999936333666101824156054682023e-06 0.;
+@everywhere intr = [1.08105966433283395241374390321269010e+00 -1.61103999936333666101824156054682023e-06 0.;
 -5.40556847423408105134957741609652478e-01 3.45281693188283016303154284469911822e-01 0.;
 -5.40508088505425823287375981275225727e-01 -3.45274810552283676957903446556133749e-01 0.]
-intv = [2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.; 
+@everywhere intv = [2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.; 
 1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 0.1;
 -1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 -0.1]
-m = [1 1 1]
+@everywhere m = [1 1 1]
 #period ~ 6.325913985
-r = zeros(Float128,(3,3)) #initialize positions and vectors as Float128
-v = zeros(Float128,(3,3))
-for i in 1:3,j in 1:3 #read data into Float128 arrays (Julia is finnicky in this way)
+@everywhere r = zeros(Float128,(3,3)) #initialize positions and vectors as Float128
+@everywhere v = zeros(Float128,(3,3))
+@everywhere for i in 1:3,j in 1:3 #read data into Float128 arrays (Julia is finnicky in this way)
     r[i,j]=intr[i,j]
     v[i,j]=intv[i,j]
 end
@@ -399,66 +399,66 @@ end
 
 function phase3_v(r,v,m, body, depth)#refine velocities
 
-    @everywhere v_results = zeros(Float128, (1331, 4)) #initialize results
+    @spawnat 1 v_results = zeros(Float128, (1331, 4)) #initialize results
     @everywhere searchtable = search_table() #1331 cases
-    v_results[:,1:3] = searchtable
+    @spawnat 1 v_results[:,1:3] = searchtable
     #search iteration
     for i in 1:443
         
 
-        core2_intv = v #initialize core velocities
-        core3_intv = v
-        core4_intv = v
+        @spawnat 2 core2_intv = v #initialize core velocities
+        @spawnat 3 core3_intv = v
+        @spawnat 4 core4_intv = v
         
         
-        core2_intv[body,:] += searchtable[i,:]/10^(depth+1)#grid search parameters
-        core3_intv[body,:] += searchtable[i+443,:]/10^(depth+1)
-        core4_intv[body,:] += searchtable[i+886,:]/10^(depth+1)
+        @spawnat 2 core2_intv[body,:] += searchtable[i,:]/10^(depth+1)#grid search parameters
+        @spawnat 3 core3_intv[body,:] += searchtable[i+443,:]/10^(depth+1)
+        @spawnat 4 core4_intv[body,:] += searchtable[i+886,:]/10^(depth+1)
         
         #period ~ 92.8
         coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3, 92.7, 10000, r, core2_intv)#coarse simulation
         coarse3 = remotecall(run,3, r, core3_intv, m, 1e-3, 92.7, 10000, r, core3_intv)
         coarse4 = remotecall(run,4, r, core4_intv, m, 1e-3, 92.7, 10000, r, core4_intv)
         
-        coarse2_p, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
-        coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
-        coarse4_p, coarse4_r, coarse4_v = fetch(coarse4)
+        @spawnat 2 coarse2_p, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
+        @spawnat 3 coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
+        @spawnat 4 coarse4_p, coarse4_r, coarse4_v = fetch(coarse4)
         
         fine2 = remotecall(run,2, coarse2_r, coarse2_v, m, 1e-4, 0.2, 1, r, core2_intv) #fine simulation
         fine3 = remotecall(run,3, coarse3_r, coarse3_v, m, 1e-4, 0.2, 1, r, core3_intv)
         fine4 = remotecall(run,4, coarse4_r, coarse4_v, m, 1e-4, 0.2, 1, r, core4_intv)
         
-        fine2_p, fine2_r, fine2_v = fetch(fine2) #fetch fine
-        fine3_p, fine3_r, fine3_v = fetch(fine3)
-        fine4_p, fine4_r, fine4_v = fetch(fine4)
+        @everywhere fine2_p, fine2_r, fine2_v = fetch(fine2) #fetch fine
+        @everywhere fine3_p, fine3_r, fine3_v = fetch(fine3)
+        @everywhere fine4_p, fine4_r, fine4_v = fetch(fine4)
         
-        v_results[i, 4] = fine2_p #save periodicity error into results
-        v_results[i+443, 4] = fine3_p
-        v_results[i+886, 4] = fine4_p
-        println("progress = ",i,"/443")
+        @spawnat 1 v_results[i, 4] = fine2_p #save periodicity error into results
+        @spawnat 1 v_results[i+443, 4] = fine3_p
+        @spawnat 1 v_results[i+886, 4] = fine4_p
+        @spawnat 1 println("progress = ",i,"/443")
     end
     #cases 1330:1331
-    core2_intv = v #initialize core velocities
-    core3_intv = v
+    @spawnat 2 core2_intv = v #initialize core velocities
+    @spawnat 3 core3_intv = v
 
-    core2_intv[body,:] += searchtable[1330,:]/10^(depth+1) #grid search parameters
-    core3_intv[body,:] += searchtable[1331,:]/10^(depth+1)
+    @spawnat 2 core2_intv[body,:] += searchtable[1330,:]/10^(depth+1) #grid search parameters
+    @spawnat 3 core3_intv[body,:] += searchtable[1331,:]/10^(depth+1)
 
     #period ~ 92.8
     coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3, 92.7, 10000, r, core2_intv) #coarse simulation
     coarse3 = remotecall(run,3, r, core3_intv, m, 1e-3, 92.7, 10000, r, core3_intv)
 
-    coarse2_p, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
-    coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
+    @spawnat 2 coarse2_p, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
+    @spawnat 3 coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
 
     fine2 = remotecall(run,2, coarse2_r, coarse2_v, m, 1e-4, 0.2, 1, r, core2_intv) #fine simulation
     fine3 = remotecall(run,3, coarse3_r, coarse3_v, m, 1e-4, 0.2, 1, r, core3_intv)
 
-    fine2_p, fine2_r, fine2_v = fetch(fine2) #fetch fine
-    fine3_p, fine3_r, fine3_v = fetch(fine3)
+    @everywhere fine2_p, fine2_r, fine2_v = fetch(fine2) #fetch fine
+    @everywhere fine3_p, fine3_r, fine3_v = fetch(fine3)
 
-    v_results[1330, 4] = fine2_p #save periodicity error into results
-    v_results[1331, 4] = fine3_p
+    @spawnat 1 v_results[1330, 4] = fine2_p #save periodicity error into results
+    @spawnat 1 v_results[1331, 4] = fine3_p
 
     sleep(2)
 
