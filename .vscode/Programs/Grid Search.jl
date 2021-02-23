@@ -9,8 +9,8 @@ intr = [1.08105966433283395241374390321269010e+00 -1.611039999363336661018241560
 -5.40556847423408105134957741609652478e-01 3.45281693188283016303154284469911822e-01 0.;
 -5.40508088505425823287375981275225727e-01 -3.45274810552283676957903446556133749e-01 0.]
 intv = [2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.; 
-1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 0.;
--1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 0.]
+1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 0.1;
+-1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 -0.1]
 m = [1 1 1]
 #period ~ 6.325913985
 r = zeros(Float128,(3,3)) #initialize positions and vectors as Float128
@@ -465,9 +465,11 @@ function phase3_v(r,v,m)#refine velocities
             println("argmin =",argmin(v_results[:,4]))
             println("minimum error =",minimum(v_results[:,4]))
             df = convert(DataFrame,v_results)
-            CSV.write(("Phase3V,B",body,"D",depth,".csv"),df)
-            r,c = argmin(v_results[:,4])
-            v[body,:] += 10^-(depth+1)*searchtable[r,:] #refine position by converging on periodic solution
+            name = string("Phase3V,B",body,"D",depth,".csv")
+            rename!(df,[:"x cord",:"y cord",:"z cord",:"periodicity error"])
+            CSV.write(name,df)
+            r = argmin(v_results[:,4])
+            v[body,:] += searchtable[r,:]/10^(depth+1) #refine position by converging on periodic solution
 
         end
     end
