@@ -38,7 +38,7 @@ end
 end
 
 @everywhere function run(r, v, m, dt, t_end, resolution, intr, intv)
-    results=[0] #initialize results array (periodicity)
+    periodicity_error = [0] #initialize results array (periodicity error)
     m0 = m[1]*v[1,:]+m[2]*v[2,:]+m[3]*v[3,:] #system momentum
 
     for i in 1:3,j in 1:3 #convert positions and velocities into relative perspective of body 3
@@ -198,7 +198,7 @@ end
         
         if step % resolution == 0
             
-            results = vcat(results, periodicity(r,v,intr, intv))
+            periodicity_error = vcat(periodicity_error, periodicity(r,v,intr, intv))
             println("t=",t)
         end
         step +=1
@@ -215,7 +215,7 @@ end
     inertial_r[2,:] = r[2,:] + inertial_r[3,:]
     inertial_r[1,:] = r[1,:] + inertial_r[3,:]
 
-    return minimum(results[100:end]), inertial_r, inertial_v #don't return early phases when close to start
+    return minimum(periodicity_error[100:end]), inertial_r, inertial_v #don't return early phases when close to start
 end
 
 

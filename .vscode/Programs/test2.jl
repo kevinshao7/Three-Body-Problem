@@ -38,9 +38,8 @@ end
 end
 
 @everywhere function run(r, v, m, dt, t_end, resolution, intr, intv)
-    results=[0] #initialize results array (periodicity)
+    periodicity_error = [0 0] #initialize results array (periodicity error)
     m0 = m[1]*v[1,:]+m[2]*v[2,:]+m[3]*v[3,:] #system momentum
-
     for i in 1:3,j in 1:3 #convert positions and velocities into relative perspective of body 3
         r[i,j]-=r[3,j]
         v[i,j]-=v[3,j]
@@ -48,6 +47,7 @@ end
     r = r[1:2,:] #discard data of body 3 (should be zero anyway)
     v = v[1:2,:]
     
+
     local a = zeros(Float128,(2,3))
     local jk = zeros(Float128,(2,3))
     local s = zeros(Float128,(2,3))
@@ -195,13 +195,13 @@ end
         v = old_v + (old_a + a)*dt/2 + ((old_jk - jk)*dt^2)/10 + ((old_s + s)*dt^3)/120
         r = old_r + (old_v + v)*dt/2 + ((old_a - a)*dt^2)/10 + ((old_jk + jk)*dt^3)/120
         
-        
         if step % resolution == 0
             
-            results = vcat(results, periodicity(r,v,intr, intv))
+            periodicity_error = vcat(periodicity_error,[t periodicity(r,v,intr, intv)])
             println("t=",t)
         end
         step +=1
+
         
     end
     inertial_v = zeros(Float128,(3,3)) #velocity in inertial frame
@@ -214,12 +214,14 @@ end
     inertial_r[3,:] = -(m[1]*r[1,:]+m[2]*r[2,:])/sum_mass #find centre of mass
     inertial_r[2,:] = r[2,:] + inertial_r[3,:]
     inertial_r[1,:] = r[1,:] + inertial_r[3,:]
-
-    return minimum(results[2:end]), inertial_r, inertial_v
+    return periodicity_error 
 end
 
+resolution = 10
+dt = 1e-3
+t_end = 100
 
-
+testp = run(r,v,m,dt,t_end,resolution,intr,intv)
 
 
 
@@ -396,45 +398,37 @@ function phase2_p(r,v,m)#refine positions
     println("DONE")
     println("Phase 2 Positions:",r)
 end
-
-function phase3_v(r,v,m, body, depth)#refine velocities
+periodicity_error, positions, velocities = run(r, v, m, 1e-3, 93, 10, r, v)
+function phase3_v(r,v,m,body,depth)#refine velocities
 
     @everywhere v_results = zeros(Float128, (1331, 4)) #initialize results
     @everywhere searchtable = search_table() #1331 cases
     v_results[:,1:3] = searchtable
     #search iteration
-    for i in 1:443
+    for i in 1:1
         
-
         core2_intv = v #initialize core velocities
         core3_intv = v
         core4_intv = v
         
         
-        core2_intv[body,:] += searchtable[i,:]/10^(depth+1)#grid search parameters
-        core3_intv[body,:] += searchtable[i+443,:]/10^(depth+1)
-        core4_intv[body,:] += searchtable[i+886,:]/10^(depth+1)
+        println(searchtable[i,:]/10^(depth+1))#grid search parameters
+        println(searchtable[i+443,:]/10^(depth+1))
+        println(searchtable[i+886,:]/10^(depth+1))
         
         #period ~ 92.8
-        coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3, 92.7, 10000, r, core2_intv)#coarse simulation
-        coarse3 = remotecall(run,3, r, core3_intv, m, 1e-3, 92.7, 10000, r, core3_intv)
-        coarse4 = remotecall(run,4, r, core4_intv, m, 1e-3, 92.7, 10000, r, core4_intv)
+        coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3, 93, 10, r, core2_intv)#coarse simulation
+        coarse3 = remotecall(run,3, r, core3_intv, m, 1e-3, 93, 10, r, core3_intv)
+        coarse4 = remotecall(run,4, r, core4_intv, m, 1e-3, 93, 10, r, core4_intv)
         
         coarse2_p, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
         coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
         coarse4_p, coarse4_r, coarse4_v = fetch(coarse4)
         
-        fine2 = remotecall(run,2, coarse2_r, coarse2_v, m, 1e-4, 0.2, 1, r, core2_intv) #fine simulation
-        fine3 = remotecall(run,3, coarse3_r, coarse3_v, m, 1e-4, 0.2, 1, r, core3_intv)
-        fine4 = remotecall(run,4, coarse4_r, coarse4_v, m, 1e-4, 0.2, 1, r, core4_intv)
         
-        fine2_p, fine2_r, fine2_v = fetch(fine2) #fetch fine
-        fine3_p, fine3_r, fine3_v = fetch(fine3)
-        fine4_p, fine4_r, fine4_v = fetch(fine4)
-        
-        v_results[i, 4] = fine2_p #save periodicity error into results
-        v_results[i+443, 4] = fine3_p
-        v_results[i+886, 4] = fine4_p
+        v_results[i, 4] = coarse2_p #save periodicity error into results
+        v_results[i+443, 4] = coarse3_p
+        v_results[i+886, 4] = coarse4_p
         println("progress = ",i,"/443")
     end
     #cases 1330:1331
@@ -445,20 +439,15 @@ function phase3_v(r,v,m, body, depth)#refine velocities
     core3_intv[body,:] += searchtable[1331,:]/10^(depth+1)
 
     #period ~ 92.8
-    coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3, 92.7, 10000, r, core2_intv) #coarse simulation
-    coarse3 = remotecall(run,3, r, core3_intv, m, 1e-3, 92.7, 10000, r, core3_intv)
+    coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3, 93, 10, r, core2_intv) #coarse simulation
+    coarse3 = remotecall(run,3, r, core3_intv, m, 1e-3, 93, 10, r, core3_intv)
 
     coarse2_p, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
     coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
 
-    fine2 = remotecall(run,2, coarse2_r, coarse2_v, m, 1e-4, 0.2, 1, r, core2_intv) #fine simulation
-    fine3 = remotecall(run,3, coarse3_r, coarse3_v, m, 1e-4, 0.2, 1, r, core3_intv)
+    v_results[1330, 4] = coarse2_p #save periodicity error into results
+    v_results[1331, 4] = coarse3_p
 
-    fine2_p, fine2_r, fine2_v = fetch(fine2) #fetch fine
-    fine3_p, fine3_r, fine3_v = fetch(fine3)
-
-    v_results[1330, 4] = fine2_p #save periodicity error into results
-    v_results[1331, 4] = fine3_p
 
     sleep(2)
 
@@ -466,11 +455,12 @@ function phase3_v(r,v,m, body, depth)#refine velocities
     println("argmin =",argmin(v_results[:,4]))
     println("minimum error =",minimum(v_results[:,4]))
     df = convert(DataFrame,v_results)
-    name = string("Phase3V,B",body,"D",depth,".csv")
+    name = string("Phase3V,B",body,"D",depth,"test3.csv")
     rename!(df,[:"x cord",:"y cord",:"z cord",:"periodicity error"])
     CSV.write(name,df)
-    r = argmin(v_results[:,4])
-    v[body,:] += searchtable[r,:]/10^(depth+1) #refine position by converging on periodic solution
+    row = argmin(v_results[:,4])
+    v[body,:] += searchtable[row,:]/10^(depth+1) #refine position by converging on periodic solution using optimal node
+
 
     println("DONE")
     println("Phase 3 Velocities:",v)
@@ -478,5 +468,4 @@ end
 
 body = 2
 depth = 1
-
-phase3_v(r,v,m, body, depth)
+#phase3_v(r,v,m,body,depth)
