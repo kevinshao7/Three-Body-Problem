@@ -215,7 +215,7 @@ end
     inertial_r[2,:] = r[2,:] + inertial_r[3,:]
     inertial_r[1,:] = r[1,:] + inertial_r[3,:]
 
-    return minimum(results[2:end]), inertial_r, inertial_v
+    return minimum(results[100:end]), inertial_r, inertial_v #don't return early phases when close to start
 end
 
 
