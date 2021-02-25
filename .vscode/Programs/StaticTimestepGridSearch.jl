@@ -199,7 +199,9 @@ end
         if step % resolution == 0
             
             periodicity_error = vcat(periodicity_error, periodicity(r,v,intr, intv))
-            println("t=",t)
+            if step % (resolution*100) == 0
+                println("t=",t)
+            end
         end
         step +=1
         
