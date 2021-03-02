@@ -8,9 +8,10 @@ using SharedArrays
 intr = [1.08105966433283395241374390321269010e+00 -1.61103999936333666101824156054682023e-06 0.;
 -5.40556847423408105134957741609652478e-01 3.45281693188283016303154284469911822e-01 0.;
 -5.40508088505425823287375981275225727e-01 -3.45274810552283676957903446556133749e-01 0.]
-intv = [2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.; 
-1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 0.1;
--1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 -0.1]
+intv =[-1.44224756704366929443994222587166476e-02 4.68929878061247363481728886794308586e-01 -3.20000000000000007203439233993691460e-03;
+1.09616414564358520570151104937817177e+00 -2.33489804567645798970612885242514878e-01 9.92000000000000055398827886188328762e-02;
+-1.09719166997314859330155860719924199e+00 -2.35990073493601609965543983507552106e-01 -9.74500000000000054966773320452855245e-02]
+
 m = [1 1 1]
 #period ~ 6.325913985
 
@@ -331,92 +332,104 @@ function phase1_am(r,v,m)
 end
 
 
-function phase2_p(r,v,m)#refine positions
+function phase2_r(r,v,m)#refine velocities
     for body in 1:3
         for depth in 1:4 #search depth
-            r_results = zeros(Float128, (11, 11, 11)) #initialize results
+            r_results = zeros(Float128, (1333, 4)) #initialize results
             searchtable = search_table() #1331 cases
-            #search iteration
-            for i in 1:332
-                
-                core1_r = r #initialize core positions 
-                core2_r = r
-                core3_r = r
-                core4_r = r
-                
-                core1_r[body,:] += 10^-(depth+1)*searchtable[i,:] #grid search parameters
-                core2_r[body,:] += 10^-(depth+1)*searchtable[i+332,:]
-                core3_r[body,:] += 10^-(depth+1)*searchtable[i+664,:]
-                core4_r[body,:] += 10^-(depth+1)*searchtable[i+996,:]
 
-                #period ~ 6.32591
-                core1 = remotecall(run,1, core1_r, v, m, 1e-3, 6.325, 1000) #coarse simulation
-                core2 = remotecall(run,2, core2_r, v, m, 1e-3, 6.325, 1000)
-                core3 = remotecall(run,3, core3_r, v, m, 1e-3, 6.325, 1000)
-                core4 = remotecall(run,4, core4_r, v, m, 1e-3, 6.325, 1000)
 
-                core1_p, core1_r, core1_v = fetch(core1) #fetch coarse
-                core2_p, core2_r, core2_v = fetch(core2)
-                core3_p, core3_r, core3_v = fetch(core3)
-                core4_p, core4_r, core4_v = fetch(core4)
+            r_results[1,1:3] = r[body,:]
+            coarse_p, coarse_r, coarse_v = run(r,v,m,1e-3,92.7,1000,r,v)
 
-                core1 = remotecall(run,1, core1_r, core1_v, m, 1e-5, 0.001, 1) #fine simulation
-                core2 = remotecall(run,2, core2_r, core2_v, m, 1e-5, 0.001, 1)
-                core3 = remotecall(run,3, core3_r, core3_v, m, 1e-5, 0.001, 1)
-                core4 = remotecall(run,4, core4_r, core4_v, m, 1e-5, 0.001, 1)
+            fine_p, fine_r, fine_v = run(r,v,m,1e-4,0.3,1,r,v)
 
-                core1_p, core1_r, core1_v = fetch(core1) #fetch fine
-                core2_p, core2_r, core2_v = fetch(core2)
-                core3_p, core3_r, core3_v = fetch(core3)
-                core4_p, core4_r, core4_v = fetch(core4)
-
-                r_results[searchtable[i,:]+[6 6 6]] = core1_p #save periodicity error into results
-                r_results[searchtable[i+332,:]+[6 6 6]] = core2_p
-                r_results[searchtable[i+664,:]+[6 6 6]] = core3_p
-                r_results[searchtable[i+996,:]+[6 6 6]] = core4_p
-                
+            r_results[1,4] = fine_p
+            for i in 2:1332
+                r_results[i,1:3] = copy(r[body,:])
             end
-            #cases 1329:1331
-            core1_r = r #initialize core positions 
-            core2_r = r
-            core3_r = r
+            r_results[2:1332,1:3] += searchtable/10^(depth+1)
+            #search iteration
+            for i in 1:443
             
-            core1_r[body,:] += 10^-(depth+1)*searchtable[1329,:] #grid search parameters
-            core2_r[body,:] += 10^-(depth+1)*searchtable[1330,:]
-            core3_r[body,:] += 10^-(depth+1)*searchtable[1331,:]
+                core2_intr = copy(r) #initialize core velocities
+                core3_intr = copy(r)
+                core4_intr = copy(r)
+                
+                
+                core2_intr[body,:] += searchtable[i,:]/10^(depth+1)#grid search parameters
+                core3_intr[body,:] += searchtable[i+443,:]/10^(depth+1)
+                core4_intr[body,:] += searchtable[i+886,:]/10^(depth+1)
+                
+                #period ~ 92.8
+                coarse2 = remotecall(run,2, core2_intr, v, m, 1e-3,92.7,1000, core2_intr, v)#coarse simulation
+                coarse3 = remotecall(run,3, core3_intr, v, m,  1e-3,92.7,1000, core3_intr, v)
+                coarse4 = remotecall(run,4, core4_intr, v, m,  1e-3,92.7,1000, core4_intr, v)
+                
+                coarse2_p, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
+                coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
+                coarse4_p, coarse4_r, coarse4_v = fetch(coarse4)
+                
+                fine2 = remotecall(run,2, coarse2_r, coarse2_v, m, 1e-4,0.3,1, core2_intr, v)#coarse simulation
+                fine3 = remotecall(run,3, coarse3_r, coarse3_v, m,  1e-4,0.3,1, core3_intr, v)
+                fine4 = remotecall(run,4, coarse4_r, coarse4_v, m,  1e-4,0.3,1, core4_intr, v)
+                
+                fine2_p, fine2_r, fine2_v = fetch(fine2) #fetch coarse
+                fine3_p, fine3_r, fine3_v = fetch(fine3)
+                fine4_p, fine4_r, fine4_v = fetch(fine4)
 
-            #period ~ 6.32591
-            core1 = remotecall(run,1, core1_r, v, m, 1e-3, 6.325, 1000) #coarse simulation
-            core2 = remotecall(run,2, core2_r, v, m, 1e-3, 6.325, 1000)
-            core3 = remotecall(run,3, core3_r, v, m, 1e-3, 6.325, 1000)
+                r_results[i+1, 4] = fine2_p #save periodicity error into results
+                r_results[i+444, 4] = fine3_p
+                r_results[i+887, 4] = fine4_p
+                println("progress = ",i,"/443")
+            end
+            #cases 1330:1331
 
-            core1_p, core1_r, core1_v = fetch(core1) #fetch coarse
-            core2_p, core2_r, core2_v = fetch(core2)
-            core3_p, core3_r, core3_v = fetch(core3)
+            core2_intr = copy(r) #initialize core velocities
+            core3_intr = copy(r)
 
-            core1 = remotecall(run,1, core1_r, core1_v, m, 1e-5, 0.001) #fine simulation
-            core2 = remotecall(run,2, core2_r, core2_v, m, 1e-5, 0.001)
-            core3 = remotecall(run,3, core3_r, core3_v, m, 1e-5, 0.001)
+            core2_intr[body,:] += searchtable[1330,:]/10^(depth+1) #grid search parameters
+            core3_intr[body,:] += searchtable[1331,:]/10^(depth+1)
 
-            core1_p, core1_r, core1_v = fetch(core1) #fetch fine
-            core2_p, core2_r, core2_v = fetch(core2)
-            core3_p, core3_r, core3_v = fetch(core3)
+            #period ~ 92.8
+            coarse2 = remotecall(run,2, core2_intr, v, m,  1e-3,92.7,1000, core2_intr, v) #coarse simulation
+            coarse3 = remotecall(run,3, core3_intr, v, m,  1e-3,92.7,1000, core3_intr, v)
 
-            r_results[searchtable[1329,:]+[6 6 6]] = core1_p #save periodicity error into results
-            r_results[searchtable[1330,:]+[6 6 6]] = core2_p
-            r_results[searchtable[1331,:]+[6 6 6]] = core3_p
+            coarse2_p, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
+            coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
 
+            fine2 = remotecall(run,2, coarse2_r, coarse2_v, m,  1e-4,0.3,1, core2_intr, v) #coarse simulation
+            fine3 = remotecall(run,3, coarse3_r, coarse3_v, m,  1e-4,0.3,1, core2_intr, v)
+
+            fine2_p, fine2_r, fine2_v = fetch(fine2) #fetch coarse
+            fine3_p, fine3_r, fine3_v = fetch(fine3)
+
+            r_results[1331, 4] = fine2_p #save periodicity error into results
+            r_results[1332, 4] = fine3_p
+
+
+
+            sleep(2)
+            row = argmin(r_results[2:1332,4])
+            println(searchtable[row,1:3])
+            r[body,:] += searchtable[row,1:3]/10^(depth+1) #refine position by converging on periodic solution using optimal node
+            r_results[1333,1:3] = r[body,:]
+            r_results[1333,4] = minimum(r_results[2:1332,4])
+            
             println("DONE Body =",body," Depth =",depth)
-            println("argmin =",argmin(r_results))
-            println("minimum error =",minimum(r_results))
+            println("argmin =",row)
+            println("minimum error =",minimum(r_results[2:1332,4]))
             df = convert(DataFrame,r_results)
-            CSV.write(("Phase2R,B",Body,"D",depth,".csv"),df)
-            r[body,:] += 10^-(depth+1)*(argmin(r_results)-[6 6 6]) #refine position by converging on periodic solution
+            name = string("Phase2Rtest,B",body,"D",depth,".csv")
+            rename!(df,[:"x cord",:"y cord",:"z cord",:"periodicity error"])
+            CSV.write(name,df)
         end
     end
     println("DONE")
     println("Phase 2 Positions:",r)
 end
+
+phase2_r(r,v,m)
 
 function phase3_v(r,v,m)#refine velocities
     for body in 1:3
@@ -435,7 +448,7 @@ function phase3_v(r,v,m)#refine velocities
 
             v_results[1,4] = fine_p
             for i in 2:1332
-                v_results[i,1:3] = v[body,:]
+                v_results[i,1:3] = copy(v[body,:])
             end
             v_results[2:1332,1:3] += searchtable/10^(depth+1)
             #search iteration
@@ -518,4 +531,4 @@ function phase3_v(r,v,m)#refine velocities
     println("Phase 3 Velocities:",v)
 end
 
-phase3_v(r,v,m)
+#phase3_v(r,v,m)
