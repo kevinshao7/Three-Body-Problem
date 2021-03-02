@@ -427,7 +427,7 @@ function phase3_v(r,v,m)#refine velocities
 
             v_results[1,1:3] = v[body,:]
             println("v=",v)
-            coarse_p, coarse_r, coarse_v = run(r,v,m,1e-3,6.2,1000,r,v)
+            coarse_p, coarse_r, coarse_v = run(r,v,m,1e-3,92.7,1000,r,v)
             println("v=",v)
 
             fine_p, fine_r, fine_v = run(r,v,m,1e-4,0.3,1,r,v)
@@ -451,9 +451,9 @@ function phase3_v(r,v,m)#refine velocities
                 core4_intv[body,:] += searchtable[i+886,:]/10^(depth+1)
                 
                 #period ~ 92.8
-                coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3,6.2,1000, r, core2_intv)#coarse simulation
-                coarse3 = remotecall(run,3, r, core3_intv, m,  1e-3,6.2,1000, r, core3_intv)
-                coarse4 = remotecall(run,4, r, core4_intv, m,  1e-3,6.2,1000, r, core4_intv)
+                coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3,92.7,1000, r, core2_intv)#coarse simulation
+                coarse3 = remotecall(run,3, r, core3_intv, m,  1e-3,92.7,1000, r, core3_intv)
+                coarse4 = remotecall(run,4, r, core4_intv, m,  1e-3,92.7,1000, r, core4_intv)
                 
                 coarse2_p, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
                 coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
@@ -481,8 +481,8 @@ function phase3_v(r,v,m)#refine velocities
             core3_intv[body,:] = core3_intv[body,:] .+ searchtable[1331,:]/10^(depth+1)
 
             #period ~ 92.8
-            coarse2 = remotecall(run,2, r, core2_intv, m,  1e-3,6.2,1000, r, core2_intv) #coarse simulation
-            coarse3 = remotecall(run,3, r, core3_intv, m,  1e-3,6.2,1000, r, core3_intv)
+            coarse2 = remotecall(run,2, r, core2_intv, m,  1e-3,92.7,1000, r, core2_intv) #coarse simulation
+            coarse3 = remotecall(run,3, r, core3_intv, m,  1e-3,92.7,1000, r, core3_intv)
 
             coarse2_p, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
             coarse3_p, coarse3_r, coarse3_v = fetch(coarse3)
