@@ -8,11 +8,11 @@ intr = [1.08105966433283395241374390321269010e+00 -1.611039999363336661018241560
 -5.40556847423408105134957741609652478e-01 3.45281693188283016303154284469911822e-01 0.;
 -5.40508088505425823287375981275225727e-01 -3.45274810552283676957903446556133749e-01 0.]
 intv = [2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.; 
-1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 0.1;
--1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 -0.1]
+1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 0.;
+-1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 0.]
 m = [1 1 1]
 dt = 1e-3
-t_end = 100
+t_end = 8
 sum_mass = 3
 #period ~ 6.325913985
 r = zeros(Float128,(3,3)) #initialize positions and vectors as Float128
@@ -228,13 +228,14 @@ function run(r, v, m, dt, t_end)
         v = old_v + (old_a + a)*dt/2 + ((old_jk - jk)*dt^2)/10 + ((old_s + s)*dt^3)/120
         r = old_r + (old_v + v)*dt/2 + ((old_a - a)*dt^2)/10 + ((old_jk + jk)*dt^3)/120
         
-        step +=1
-        if step % 100 == 1
+        
+        if step % 1 == 0
             #conversion to inertial frame
             new = hcat(t,error(r,v,m,m0,sum_mass,e0,a0))
             results = vcat(results,new)
             println("t=",t)
         end
+        step +=1
 
         
     end
@@ -245,7 +246,7 @@ using Plots
 
 results = run(r,v,m,dt,t_end)
 s = 1
-e = 1002
+e = 80
 title = plot(title=string("6 Order Hermite, dt =",dt),ticks=false, labels=false,grid = false, showaxis = false, bottom_margin = -100Plots.px)
 system = plot(results[s:e,2:4],results[s:e,5:7],results[s:e,8:10],title="System",linewidth = 3)
 velocities = plot(results[s:e,11:13],results[s:e,14:16],results[s:e,17:19],title="Velocities",linewidth = 3)

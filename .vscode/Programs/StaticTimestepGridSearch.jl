@@ -460,7 +460,7 @@ function phase3_v(r,v,m)#refine velocities
             rename!(df,[:"x cord",:"y cord",:"z cord",:"periodicity error"])
             CSV.write(name,df)
             row = argmin(v_results[:,4])
-            v[body,:] += searchtable[row,:]/10^(depth+1) #refine position by converging on periodic solution using optimal node
+            v[body,:] += v_results[row,1:3]/10^(depth+1) #refine position by converging on periodic solution using optimal node
         
         end
     end
