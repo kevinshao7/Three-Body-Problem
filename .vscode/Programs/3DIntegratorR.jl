@@ -254,7 +254,7 @@ energy = plot(results[:,1],results[:,20],title="Energy Error (1e18)",linewidth =
 angular_m = plot(results[:,1],results[:,21],title="Angular Momentum Error (1e18)",linewidth = 3)
 period = plot(results[:,1],results[:,22],title="Max Periodicity Error",linewidth = 3)
 plot(title,system,velocities,energy,angular_m,period,layout=(6,1),size=(500,1000))
-savefig("6Order3D.png")
+savefig("6OrderRelative3D.png")
 
 using CSV
 using DataFrames
