@@ -437,29 +437,29 @@ function phase3_v(r,v,m)#refine velocities
 
 
             v_results[1,1:3] = v[body,:]
-            println("v=",v)
+            
             coarse_p, coarse_r, coarse_v = run(r,v,m,1e-3,6.2,1000,r,v)
-            println("v=",v)
+            
 
             fine_p, fine_r, fine_v = run(r,v,m,1e-4,0.3,1,r,v)
-            println("v=",v)
-
+       
             v_results[1,4] = fine_p
             for i in 2:1332
                 v_results[i,1:3] = copy(v[body,:])
             end
             v_results[2:1332,1:3] += searchtable/10^(depth+1)
             #search iteration
-            for i in 223:223
+            for i in 1:443
             
-                core2_intv = copy(v) #initialize core velocities
+                core2_intv = copy(v)
                 core3_intv = copy(v)
                 core4_intv = copy(v)
+
+                core2_intv[body,:] = copy(v_results[i+1,1:3]) #initialize core velocities
+                core3_intv[body,:] = copy(v_results[i+444,1:3])
+                core4_intv[body,:] = copy(v_results[i+887,1:3])
                 
-                
-                core2_intv[body,:] += searchtable[i,:]/10^(depth+1)#grid search parameters
-                core3_intv[body,:] += searchtable[i+443,:]/10^(depth+1)
-                core4_intv[body,:] += searchtable[i+886,:]/10^(depth+1)
+            
                 
                 #period ~ 92.8
                 coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3,6.2,1000, r, core2_intv)#coarse simulation
@@ -485,11 +485,13 @@ function phase3_v(r,v,m)#refine velocities
             end
             #cases 1330:1331
 
-            core2_intv = copy(v) #initialize core velocities
+            core2_intv = copy(v)
             core3_intv = copy(v)
 
-            core2_intv[body,:] = core2_intv[body,:] .+ searchtable[1330,:]/10^(depth+1) #grid search parameters
-            core3_intv[body,:] = core3_intv[body,:] .+ searchtable[1331,:]/10^(depth+1)
+
+            core2_intv[body,:] = copy(v_results[1331,1:3]) #initialize core velocities
+            core3_intv[body,:] = copy(v_results[1332,1:3])
+
 
             #period ~ 92.8
             coarse2 = remotecall(run,2, r, core2_intv, m,  1e-3,6.2,1000, r, core2_intv) #coarse simulation
@@ -512,7 +514,7 @@ function phase3_v(r,v,m)#refine velocities
             sleep(2)
             row = argmin(v_results[2:1332,4])
             println(searchtable[row,1:3])
-            v[body,:] += searchtable[row,1:3]/10^(depth+1) #refine position by converging on periodic solution using optimal node
+            v[body,:] = searchtable[row,1:3]/10^(depth+1) #refine position by converging on periodic solution using optimal node
             v_results[1333,1:3] = v[body,:]
             v_results[1333,4] = minimum(v_results[2:1332,4])
             
