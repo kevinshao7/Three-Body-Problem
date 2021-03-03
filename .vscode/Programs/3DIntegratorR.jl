@@ -8,7 +8,7 @@ intr = [1.08066966433283384729277098058181084e+00 -1.554161103999936366267382815
 intv = [-1.44224756704366929443994222587166476e-02 4.68929878061247363481728886794308586e-01 -3.20000000000000007203439233993691460e-03; 1.09616414564358520570151104937817177e+00 -2.33489804567645798970612885242514878e-01 9.92000000000000055398827886188328762e-02; -1.09719166997314859330155860719924199e+00 -2.35990073493601609965543983507552106e-01 -9.74500000000000054966773320452855245e-02]
 
 m = [1 1 1]
-dt = 1e-3
+dt = 1e-4
 t_end = 93
 sum_mass = 3
 #period ~ 6.325913985
@@ -24,6 +24,10 @@ function initialize(r,v,m) #calculate initial energy and momentum
     e0 = 0  #initialize energy
     a0 = zeros(Float128,(3,1)) #angular momentum
     m0 = m[1]*v[1,:]+m[2]*v[2,:]+m[3]*v[3,:]#initial momentum
+    com = (m[1]*r[1,:]+m[2]*r[2,:]+m[3]*r[3,:])/(m[1]+m[2]+m[3])
+    for x in 1:3#normalize to center of mass
+        r[x,:] -= com
+    end
     for x in 1:3
         e0 += 0.5*m[x]*v[x,:]'*v[x,:] #calculate kinetic energy
         a0 += cross(r[x,:],(m[x]*v[x,:])) #angular momentum
@@ -145,12 +149,12 @@ function run(r, v, m, dt, t_end)
     step = 0
     for t in 0:dt:t_end
         #save old values
-        old_r = r
-        old_v = v
-        old_a = a
-        old_jk = jk
-        old_s = s
-        old_c = c
+        old_r = copy(r)
+        old_v = copy(v)
+        old_a = copy(a)
+        old_jk = copy(jk)
+        old_s = copy(s)
+        old_c = copy(c)
 
         #predictor, taylor series
         r += v*dt + a*(dt^2)/2 + jk*(dt^3)/6 + s*(dt^4)/24 + c*(dt^5)/120 
@@ -243,7 +247,7 @@ using Plots
 
 results = run(r,v,m,dt,t_end)
 s = 1
-e = 1000
+e = 9302
 title = plot(title=string("6 Order Hermite, dt =",dt),ticks=false, labels=false,grid = false, showaxis = false, bottom_margin = -100Plots.px)
 system = plot(results[s:e,2:4],results[s:e,5:7],results[s:e,8:10],title="System",linewidth = 3)
 velocities = plot(results[s:e,11:13],results[s:e,14:16],results[s:e,17:19],title="Velocities",linewidth = 3)
