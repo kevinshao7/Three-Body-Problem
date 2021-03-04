@@ -342,7 +342,7 @@ function phase2_r(r,v,m)#refine velocities
             r_results[1,1:3] = r[body,:]
             coarse_p, coarse_r, coarse_v = run(r,v,m,1e-3,92.7,1000,r,v)
 
-            fine_p, fine_r, fine_v = run(r,v,m,1e-4,0.3,1,r,v)
+            fine_p, fine_r, fine_v = run(coarse_r,coarse_v,m,1e-4,0.3,1,r,v)
 
             r_results[1,4] = fine_p
             for i in 2:1332
@@ -443,7 +443,7 @@ function phase3_v(r,v,m)#refine velocities
             coarse_p, coarse_r, coarse_v = run(r,v,m,1e-3,92.7,1000,r,v)
             println("v=",v)
 
-            fine_p, fine_r, fine_v = run(r,v,m,1e-4,0.3,1,r,v)
+            fine_p, fine_r, fine_v = run(coarse_r,coarse_v,m,1e-4,0.3,1,r,v)
             println("v=",v)
 
             v_results[1,4] = fine_p
