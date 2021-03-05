@@ -112,7 +112,7 @@ function Inertial(r, v, m, dt, t_end)
             c[j,:] -= m[i] * tjkij / r3 - 9*alpha*sij - 9*beta*jkij - 3*gamma*aij #body j
         end
     end
-    
+
     #main loop
     step = 0 #initialize step counter
     for t in 0:dt:t_end
@@ -123,23 +123,26 @@ function Inertial(r, v, m, dt, t_end)
         old_s = copy(s)
         old_c = copy(c)
         #predictor (Taylor series)
-        pr = r + v*dt + a*(dt^2)/2 + jk*(dt^3)/6 + s*(dt^4)/24 + c*(dt^5)/120
-        pv = v + a*dt + jk*(dt^2)/2 + s*(dt^3)/6 + c*(dt^4)/24
-        pa = a + jk*dt + s*(dt^2)/2 + c*(dt^3)/6
-        pjk = jk + s*dt + c*(dt^2)/2
+        r += v*dt + a*(dt^2)/2 + jk*(dt^3)/6 + s*(dt^4)/24 + c*(dt^5)/120
+        v += a*dt + jk*(dt^2)/2 + s*(dt^3)/6 + c*(dt^4)/24
+        # pa = a + jk*dt + s*(dt^2)/2 + c*(dt^3)/6
+        # pjk = jk + s*dt + c*(dt^2)/2
         
         #calculate new acceleration etc. at new predicted position
         a = zeros(Float128,(3,3))
         jk = zeros(Float128,(3,3))
         s = zeros(Float128,(3,3))
         c = zeros(Float128,(3,3))
+       
         for i in 1:3 #loop through pairs of bodies (1,2), (1,3), (2,3)
             for j in i+1:3 
                 rij = r[j,:]-r[i,:] #relative positions
                 vij = v[j,:]-v[i,:] #relative velocities
                 r2 = rij'*rij 
+                
                 r3 = r2*sqrt(r2)
                 aij = m[j] * rij / r3 #acceleration of i to j
+                
                 a[i,:] += aij #calculate acceleration of body i
                 a[j,:] -= m[i]*aij/m[j] #body j
                 alpha = (rij'*vij)/r2 #see paper for coefficients alpha, beta, and gamma
@@ -148,7 +151,7 @@ function Inertial(r, v, m, dt, t_end)
             end
         end
         
-    
+        
         #break out of loop (acceleration and jerk must be totalled before calculating higher order derivatives)
         for i in 1:3
             for j in i+1:3 
@@ -170,7 +173,7 @@ function Inertial(r, v, m, dt, t_end)
                 c[j,:] -= m[i] * tjkij / r3 - 9*alpha*sij - 9*beta*jkij - 3*gamma*aij #body j
             end
         end
-        println(s[1,:]-s[3,:])
+
         #corrector (see paper for more details)
         v = old_v + (old_a + a)*dt/2 + ((old_jk - jk)*dt^2)/10 + ((old_s + s)*dt^3)/120
         r = old_r + (old_v + v)*dt/2 + ((old_a - a)*dt^2)/10 + ((old_jk + jk)*dt^3)/120

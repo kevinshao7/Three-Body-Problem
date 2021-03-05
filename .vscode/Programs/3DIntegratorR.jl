@@ -150,6 +150,8 @@ function run(r, v, m, dt, t_end)
     c[1,:] += c_12 #crackle of body i
     c[2,:] -= c_12*m[1]/m[2] #body j
     
+    
+
     #main loop
     step = 0
     for t in 0:dt:t_end
@@ -164,18 +166,21 @@ function run(r, v, m, dt, t_end)
         #predictor, taylor series
         r += v*dt + a*(dt^2)/2 + jk*(dt^3)/6 + s*(dt^4)/24 + c*(dt^5)/120 
         v += a*dt + jk*(dt^2)/2 + s*(dt^3)/6 + c*(dt^4)/24
-
+        
         #calculate acceleration, jerk, snap, and crackle
         #initialize values
         a = zeros(Float128,(2,3))
         jk = zeros(Float128,(2,3))
         s = zeros(Float128,(2,3))
         c = zeros(Float128,(2,3))
+        
         for i in 1:2 #loop through bodies 1, 2
             #calculate in relation to body 3
             r2 = r[i,:]'*r[i,:]
+            
             r3 = r2*sqrt(r2)
             a3i = m[i] * r[i,:] / r3 #acceleration of 3 to i
+            
             a[i,:] -= a3i*m[3]/m[i] #body i to 3
             a[i,:] -= a3i #-body 3 to i
             a[3-i,:] -= a3i #-body 3 to 3-i
@@ -185,7 +190,7 @@ function run(r, v, m, dt, t_end)
             jk[i,:]  -= jk3i
             jk[3-i,:] -= jk3i
         end
-    
+        
         #the calculations for the pair 12 happens outside the loop because it doesn't fit in as well
         r_12 = r[2,:]-r[1,:] #relative positions 1 to 2
         v_12 = v[2,:]-v[1,:]
@@ -198,7 +203,8 @@ function run(r, v, m, dt, t_end)
         jk_12 = m[2] * v_12 / r3_12 - 3*alpha_12*a_12
         jk[1,:] += jk_12
         jk[2,:] -= jk_12*m[1]/m[2]
-    
+
+
         for i in 1:2 #loop through bodies 1, 2
             #calculate in relation to body 3
             r2 = r[i,:]'*r[i,:]
@@ -228,7 +234,7 @@ function run(r, v, m, dt, t_end)
         c_12 = m[2] * tjk_12 / r3_12 - 9*alpha_12*s_12 - 9*beta_12*jk_12 - 3*gamma_12*a_12
         c[1,:] += c_12 #crackle of body i
         c[2,:] -= c_12*m[1]/m[2] #body j
-        println(s[1,:])
+        
 
         #corrector
         v = old_v + (old_a + a)*dt/2 + ((old_jk - jk)*dt^2)/10 + ((old_s + s)*dt^3)/120
