@@ -391,7 +391,7 @@ for  i in 3:6 #1000 up to 1,000,000 steps
     b = remotecall(runR,2, r, v, m, dt, t_end)
     Results[40,(i-2)*2-1] = fetch(b)
     println("1e",i,"step Relative done")
-    for  j in 1:10
+    for  j in 1:13
         
         b = remotecall(runI,2, r, v, m, dt, t_end)
         c = remotecall(runI,3, r, v, m, dt, t_end)
