@@ -402,7 +402,7 @@ for  i in 3:6 #1000 up to 1,000,000 steps
         Results[j+26,(i-2)*2] = fetch(d)
     end
     b = remotecall(runI,2, r, v, m, dt, t_end)
-    Results[40,(i-2)*2-1] = fetch(b)
+    Results[40,(i-2)*2] = fetch(b)
     println("1e",i,"step Inertial done")
     dataframe = convert(DataFrame,Results)
     CSV.write("Balanced,Inertial.csv",dataframe)
