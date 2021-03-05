@@ -29,12 +29,9 @@ end
 
 
 
-@everywhere function RelativeError(r,v,m,m0,sum_mass,e0,a0)
-    energy = 0
-    angular_m = 0
+@everywhere function RelativeError(r,v,m,m0,sum_mass)
     inertial_v = zeros(Float128,(3,2)) #velocity in inertial frame
     inertial_r = zeros(Float128,(3,2)) #positions in inertial frame
-    perror = [0. 0. 0. 0. 0. 0.] #periodicity error
     #conversion to inertial frame
     inertial_v[3,:] = (m0 - m[2]*v[2,:] - m[1]*v[1,:])/sum_mass #derived from conservation of momentum
     inertial_v[2,:] = v[2,:] + inertial_v[3,:]
@@ -42,17 +39,7 @@ end
     inertial_r[3,:] = -(m[1]*r[1,:]+m[2]*r[2,:])/sum_mass #find centre of mass
     inertial_r[2,:] = r[2,:] + inertial_r[3,:]
     inertial_r[1,:] = r[1,:] + inertial_r[3,:]
-    for i in 1:3
-        energy += 0.5*m[i]*inertial_v[i,:]'*inertial_v[i,:] 
-        angular_m += cross(inertial_r[i,:],(m[i]*inertial_v[i,:]))
-        perror[i] = sqrt((intr[i,:]-inertial_r[i,:])'*(intr[i,:]-inertial_r[i,:])) #calculate distance from original state
-        perror[i+3] = sqrt((intv[i,:]-inertial_v[i,:])'*(intv[i,:]-inertial_v[i,:]))
-    end
-    rij = r[1,:]-r[2,:] #distance 1 to 2
-    energy -= m[1]*m[3]/sqrt(r[1,:]'*r[1,:]) #potential energy
-    energy -= m[2]*m[3]/sqrt(r[2,:]'*r[2,:])
-    energy -= m[1]*m[2]/sqrt(rij'*rij)
-    return hcat(hcat(reshape(inertial_r,(1,6)),reshape(inertial_v,(1,6))),[1e18*energy/e0-1e18 1e18*sqrt((angular_m-a0)'*(angular_m-a0)) maximum(perror)])
+    return hcat(reshape(inertial_r,(1,6)),reshape(inertial_v,(1,6)))
 end
 
 
@@ -212,10 +199,10 @@ end
         r = old_r + (old_v + v)*dt/2 + ((old_a - a)*dt^2)/10 + ((old_jk + jk)*dt^3)/120
         
         
-        if step% resolution == 0
+        if step % resolution == 0
             #conversion to inertial frame
-            new = hcat(t,RelativeError(r,v,m,m0,sum_mass,e0,a0))
-            results = vcat(results,new)
+            new = hcat(t,RelativeError(r,v,m,m0,sum_mass))
+            results = new
             println("t=",t)
         end
         step +=1
@@ -342,9 +329,9 @@ end
         r = old_r + (old_v + v)*dt/2 + ((old_a - a)*dt^2)/10 + ((old_jk + jk)*dt^3)/120
         
         
-        if step % resolution == 0 #record results once every 100 timesteps
-            new = hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),hcat(t,InertialError(intr,intv,r,v,m,e0,m0,a0)))
-            results = vcat(results,new)
+        if step % resolution == 0 #record results 1000 times per sim
+            new = hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),[t])
+            results = new
             println("t=",t)
         end
         step += 1
@@ -391,30 +378,34 @@ addprocs(4)
 for  i in 3:6 #1000 up to 1,000,000 steps
     t_end=dt*10^i
     for  j in 1:10
-        a = remotecall(runR,1, r, v, m, dt, t_end)
+        
         b = remotecall(runR,2, r, v, m, dt, t_end)
         c = remotecall(runR,3, r, v, m, dt, t_end)
         d = remotecall(runR,4, r, v, m, dt, t_end)
         
-        Results[j,(i-2)*2-1] = fetch(a)
-        Results[j+10,(i-2)*2-1] = fetch(b)
-        Results[j+20,(i-2)*2-1] = fetch(c)
-        Results[j+30,(i-2)*2-1] = fetch(d)
+       
+        Results[j,(i-2)*2-1] = fetch(b)
+        Results[j+13,(i-2)*2-1] = fetch(c)
+        Results[j+26,(i-2)*2-1] = fetch(d)
     end
+    b = remotecall(runR,2, r, v, m, dt, t_end)
+    Results[40,(i-2)*2-1] = fetch(b)
     println("1e",i,"step Relative done")
     for  j in 1:10
-        a = remotecall(runI,1, r, v, m, dt, t_end)
+        
         b = remotecall(runI,2, r, v, m, dt, t_end)
         c = remotecall(runI,3, r, v, m, dt, t_end)
         d = remotecall(runI,4, r, v, m, dt, t_end)
-        Results[j,(i-2)*2] = fetch(a)
-        Results[j+10,(i-2)*2] = fetch(b)
-        Results[j+20,(i-2)*2] = fetch(c)
-        Results[j+30,(i-2)*2] = fetch(d)
+        
+        Results[j,(i-2)*2] = fetch(b)
+        Results[j+13,(i-2)*2] = fetch(c)
+        Results[j+26,(i-2)*2] = fetch(d)
     end
+    b = remotecall(runI,2, r, v, m, dt, t_end)
+    Results[40,(i-2)*2-1] = fetch(b)
     println("1e",i,"step Inertial done")
     dataframe = convert(DataFrame,Results)
-    CSV.write("Race.csv",dataframe)
+    CSV.write("Balanced,Inertial.csv",dataframe)
 end
 
 
