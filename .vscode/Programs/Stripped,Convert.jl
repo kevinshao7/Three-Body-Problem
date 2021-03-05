@@ -519,7 +519,7 @@ using SharedArrays
 Results = SharedArray{Float64}(results)
 addprocs(4)
 
-for  i in 3:6 #1000 up to 1,000,000 steps
+for  i in 6:6 #1000 up to 1,000,000 steps
     t_end=dt*10^i
     for  j in 1:13
     
@@ -534,17 +534,17 @@ for  i in 3:6 #1000 up to 1,000,000 steps
     b = remotecall(stripped,2, r, v, m, dt, t_end)
     Results[40,(i-2)*2-1] = fetch(b)
     println("1e",i,"step stripped done")
-    for  j in 1:10
-        b = remotecall(converted,2, r, v, m, dt, t_end)
-        c = remotecall(converted,3, r, v, m, dt, t_end)
-        d = remotecall(converted,4, r, v, m, dt, t_end)
+    # for  j in 1:13
+    #     b = remotecall(converted,2, r, v, m, dt, t_end)
+    #     c = remotecall(converted,3, r, v, m, dt, t_end)
+    #     d = remotecall(converted,4, r, v, m, dt, t_end)
 
-        Results[j,(i-2)*2] = fetch(b)
-        Results[j+13,(i-2)*2] = fetch(c)
-        Results[j+26,(i-2)*2] = fetch(d)
-    end 
-    b = remotecall(converted,2, r, v, m, dt, t_end)
-    Results[40,(i-2)*2] = fetch(b)
+    #     Results[j,(i-2)*2] = fetch(b)
+    #     Results[j+13,(i-2)*2] = fetch(c)
+    #     Results[j+26,(i-2)*2] = fetch(d)
+    # end 
+    # b = remotecall(converted,2, r, v, m, dt, t_end)
+    # Results[40,(i-2)*2] = fetch(b)
     println("1e",i,"step Inertial done")
     dataframe = convert(DataFrame,Results)
     CSV.write("Stripped,Convert.csv",dataframe)
