@@ -377,7 +377,7 @@ addprocs(4)
 
 for  i in 3:6 #1000 up to 1,000,000 steps
     t_end=dt*10^i
-    for  j in 1:10
+    for  j in 1:13
         
         b = remotecall(runR,2, r, v, m, dt, t_end)
         c = remotecall(runR,3, r, v, m, dt, t_end)
