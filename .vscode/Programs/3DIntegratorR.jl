@@ -4,15 +4,12 @@
 using Quadmath
 using LinearAlgebra
 
-intr = [1.08105966433283395241374390321269010e+00 -1.61103999936333666101824156054682023e-06 0.;
--5.40556847423408105134957741609652478e-01 3.45281693188283016303154284469911822e-01 0.;
--5.40508088505425823287375981275225727e-01 -3.45274810552283676957903446556133749e-01 0.]
-intv =[2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.;
-1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 0.;
- -1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 0.]
+intr = [1.08066966433283384729277098058181084e+00 -1.55416110399993636626738281562853938e-02 4.50000000000000008012254054667877767e-04; -5.39006847423408148822462134658328736e-01 3.46431693188283000967269808362258843e-01 2.10000000000000010402377743912172292e-04; -5.40558088505425865480001016566413696e-01 -3.45324810552283650813174768062774334e-01 -3.00000000000000007600257229123386082e-05]
+intv = [-1.44224756704366929443994222587166476e-02 4.68929878061247363481728886794308586e-01 -3.20000000000000007203439233993691460e-03; 1.09616414564358520570151104937817177e+00 -2.33489804567645798970612885242514878e-01 9.92000000000000055398827886188328762e-02; -1.09719166997314859330155860719924199e+00 -2.35990073493601609965543983507552106e-01 -9.74500000000000054966773320452855245e-02]
+
 m = [1 1 1]
-dt = 1e-4
-t_end = 1e-4
+dt = 1e-3
+t_end = 100
 sum_mass = 3
 #period ~ 6.325913985
 r = zeros(Float128,(3,3)) #initialize positions and vectors as Float128
@@ -204,7 +201,7 @@ function run(r, v, m, dt, t_end)
         jk[1,:] += jk_12
         jk[2,:] -= jk_12*m[1]/m[2]
 
-
+        
         for i in 1:2 #loop through bodies 1, 2
             #calculate in relation to body 3
             r2 = r[i,:]'*r[i,:]
@@ -235,7 +232,7 @@ function run(r, v, m, dt, t_end)
         c[1,:] += c_12 #crackle of body i
         c[2,:] -= c_12*m[1]/m[2] #body j
         
-
+        
         #corrector
         v = old_v + (old_a + a)*dt/2 + ((old_jk - jk)*dt^2)/10 + ((old_s + s)*dt^3)/120
         r = old_r + (old_v + v)*dt/2 + ((old_a - a)*dt^2)/10 + ((old_jk + jk)*dt^3)/120
@@ -250,7 +247,6 @@ function run(r, v, m, dt, t_end)
         end
         step +=1
 
-        
     end
     return results
 end
@@ -259,10 +255,10 @@ using Plots
 
 results = run(r,v,m,dt,t_end)
 s = 1
-e = 1
-title = plot(title=string("6 Order Hermite, dt =",dt),ticks=false, labels=false,grid = false, showaxis = false, bottom_margin = -100Plots.px)
-system = plot(results[s:e,2:4],results[s:e,5:7],results[s:e,8:10],title="System",linewidth = 3)
-velocities = plot(results[s:e,11:13],results[s:e,14:16],results[s:e,17:19],title="Velocities",linewidth = 3)
+e = 1000
+title = plot(title=string("6 Order Hermite Relative, dt =",dt),ticks=false, labels=false,grid = false, showaxis = false, bottom_margin = -100Plots.px)
+system = plot(results[s:e,2:4],results[s:e,5:7],results[s:e,8:10],labels=["r1" "r2" "r3"],title="System",linewidth = 3)
+velocities = plot(results[s:e,11:13],results[s:e,14:16],results[s:e,17:19],labels=["v1" "v2" "v3"],title="Velocities",linewidth = 3)
 energy = plot(results[:,1],results[:,20],title="Energy Error (1e18)",linewidth = 3)
 angular_m = plot(results[:,1],results[:,21],title="Angular Momentum Error (1e18)",linewidth = 3)
 period = plot(results[:,1],results[:,22],title="Max Periodicity Error",linewidth = 3)
