@@ -238,7 +238,7 @@ function run(r, v, m, dt, t_end)
         r = old_r + (old_v + v)*dt/2 + ((old_a - a)*dt^2)/10 + ((old_jk + jk)*dt^3)/120
         
         
-        if step % 100 == 0
+        if step % 1 == 0
             
             #conversion to inertial frame
             new = hcat(t,error(r,v,m,m0,sum_mass,e0,a0))

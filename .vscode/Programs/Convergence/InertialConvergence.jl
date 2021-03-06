@@ -177,7 +177,7 @@ function Inertial(r, v, m, dt, t_end)
         
         
         
-        if step % 100 == 0
+        if step % 1 == 0
             
             #conversion to inertial frame
             new = hcat([t],InertialError(intr,intv,r,v,m,e0,m0,a0))
@@ -189,23 +189,15 @@ function Inertial(r, v, m, dt, t_end)
     return results
 end
 
-
-using Plots
-s = 1
-e = 1000
-title = plot(title=string("6 Order Hermite Inertial, dt =",dt),ticks=false, labels=false, grid = false, showaxis = false, bottom_margin = -100Plots.px)
-results = Inertial(r, v, m, dt, t_end)
-names = ["r1" "r2" "r3"]
-bodies = plot(results[s:e,2:4],results[s:e,5:7],results[s:e,8:10],title="System",label =names,linewidth = 3)
-velocities = plot(results[s:e,11:13],results[s:e,14:16],results[s:e,17:19],title="Velocities",label = ["v1" "v2" "v3"],linewidth = 3)
-energy = plot(results[:,1],results[:,20],title="Energy Error (1e18)",legend=false,linewidth = 3)
-linear_m = plot(results[:,1],results[:,21],title="Linear Momentum Error (1e18)",legend=false,linewidth = 3)
-angular_m = plot(results[:,1],results[:,22],title="Angular Momentum Error (1e18)",legend=false,linewidth = 3)
-periodicity_error = plot(results[:,1],results[:,23],title="Periodicity Error",legend=false,linewidth = 3)
-plot(title,bodies,velocities,energy,linear_m,angular_m,periodicity_error,layout=(7,1),size=(500,1000))
-savefig("6OrderInertial3D.png")
+arr = zeros(Float128,(1002,8))
+for i in 1:8
+    dt = 1/(10^i)
+    t_end = dt*1000
+    results = run(r,v,m,dt,t_end)
+    arr[:,i] = results[:,20]
+end
 
 using CSV
 using DataFrames
-df = convert(DataFrame,results)
-CSV.write("6OrderInertial.csv",df)
+df = convert(DataFrame,arr)
+CSV.write("InertialConvergence.csv",df)
