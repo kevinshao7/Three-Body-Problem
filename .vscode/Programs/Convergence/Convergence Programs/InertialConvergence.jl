@@ -192,7 +192,7 @@ arr = zeros(Float128,(1002,8)) #1000 steps, 8 sizes of timesteps
 for i in 1:8 #dt = 1e-1, 1e-2, ..... 1e-8
     dt = 1/(10^i)
     t_end = dt*1000 #integrate 1000 steps
-    results = run(r,v,m,dt,t_end)
+    results = Inertial(r, v, m, dt, t_end)
     arr[:,i] = results[:,20] #save the energy error of each step of the sim
 end
 
