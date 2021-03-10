@@ -3,7 +3,7 @@
 
 using Quadmath
 using LinearAlgebra
-
+#Setup (Three Dimensional Rotating Figure 8)
 intr = [1.08066966433283384729277098058181084e+00 -1.55416110399993636626738281562853938e-02 4.50000000000000008012254054667877767e-04; -5.39006847423408148822462134658328736e-01 3.46431693188283000967269808362258843e-01 2.10000000000000010402377743912172292e-04; -5.40558088505425865480001016566413696e-01 -3.45324810552283650813174768062774334e-01 -3.00000000000000007600257229123386082e-05]
 intv = [-1.44224756704366929443994222587166476e-02 4.68929878061247363481728886794308586e-01 -3.20000000000000007203439233993691460e-03; 1.09616414564358520570151104937817177e+00 -2.33489804567645798970612885242514878e-01 9.92000000000000055398827886188328762e-02; -1.09719166997314859330155860719924199e+00 -2.35990073493601609965543983507552106e-01 -9.74500000000000054966773320452855245e-02]
 
@@ -11,7 +11,6 @@ m = [1 1 1]
 dt = 1e-3
 t_end = 1
 sum_mass = 3
-#period ~ 6.325913985
 r = zeros(Float128,(3,3)) #initialize positions and vectors as Float128
 v = zeros(Float128,(3,3))
 for i in 1:3,j in 1:3 #read data into Float128 arrays (Julia is finnicky in this way)
@@ -71,7 +70,7 @@ end
 
 
 
-function run(r, v, m, dt, t_end)
+function Relative(r, v, m, dt, t_end)
     e0,m0,a0 = initialize(r,v,m)
 
     results=hcat(hcat([0],hcat(reshape(r,(1,9))),hcat(reshape(v,(1,9))),zeros((1,3)))) #initialize results array
@@ -252,20 +251,15 @@ function run(r, v, m, dt, t_end)
 end
 using Plots
 
-arr = zeros(Float128,(1002,8))
-for i in 1:8
+arr = zeros(Float128,(1002,8)) #1000 steps, 8 sizes of timesteps
+for i in 1:8 #dt = 1e-1, 1e-2, ..... 1e-8
     dt = 1/(10^i)
     t_end = dt*1000
-    results = run(r,v,m,dt,t_end)
-    arr[:,i] = results[:,20]
+    results = Relative(r,v,m,dt,t_end) #integrate 1000 steps
+    arr[:,i] = results[:,20] #save the energy error of each step of the sim
 end
 
 using CSV
 using DataFrames
 df = convert(DataFrame,arr)
 CSV.write("RelativeConvergence.csv",df)
-
-# anim = @animate for i in s:e
-#     plot(results[s:i,2:4],results[s:i,5:7],results[s:i,8:10],title="System",linewidth = 3)
-# end
-# gif(anim, "6Order3D.gif", fps = 15)
