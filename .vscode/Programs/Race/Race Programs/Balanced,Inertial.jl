@@ -29,7 +29,7 @@ end
 
 
 
-@everywhere function RelativeError(r,v,m,m0,sum_mass)
+@everywhere function RelativeConversion(r,v,m,m0,sum_mass)
     inertial_v = zeros(Float128,(3,2)) #velocity in inertial frame
     inertial_r = zeros(Float128,(3,2)) #positions in inertial frame
     #conversion to inertial frame
@@ -124,12 +124,12 @@ end
     step = 0
     for t in 0:dt:t_end
         #save old values
-        old_r = r
-        old_v = v
-        old_a = a
-        old_jk = jk
-        old_s = s
-        old_c = c
+        old_r = copy(r)
+        old_v = copy(v)
+        old_a = copy(a)
+        old_jk = copy(jk)
+        old_s = copy(s)
+        old_c = copy(c)
 
         #predictor, taylor series
         r += v*dt + a*(dt^2)/2 + jk*(dt^3)/6 + s*(dt^4)/24 + c*(dt^5)/120 
@@ -201,7 +201,7 @@ end
         
         if step % resolution == 0
             #conversion to inertial frame
-            new = hcat(t,RelativeError(r,v,m,m0,sum_mass))
+            new = hcat(t,RelativeConversion(r,v,m,m0,sum_mass))
             results = new
             println("t=",t)
         end
@@ -211,31 +211,12 @@ end
     return results
 end
 
-@everywhere function InertialError(intr,intv,r,v,m,e0,m0,a0)
-    energy = 0 #initialize values
-    linear_m = [0,0]
-    angular_m = 0
-    perror = [0. 0. 0. 0. 0. 0.] #periodicity error
-    for i in 1:3
-        energy += 0.5*m[i]*v[i,:]'*v[i,:] #kinetic energy
-        linear_m += m[i]*v[i,:] #linear momentum
-        angular_m += cross(r[i,:],(m[i]*v[i,:])) #angular momentum
-        perror[i] = sqrt((intr[i,:]-r[i,:])'*(intr[i,:]-r[i,:])) #difference from original position
-        perror[i+3] = sqrt((intv[i,:]-v[i,:])'*(intv[i,:]-v[i,:])) #difference from original velocity
-        for j in i+1:3
-            ij = r[j,:]-r[i,:]
-            energy -= m[j]*m[i]/sqrt(ij'*ij)
-        end
-    end
-    return [1e18*energy/e0-1e18 1e18*sqrt((linear_m-m0)'*(linear_m-m0)) 1e18*sqrt((angular_m-a0)'*(angular_m-a0)) maximum(perror)] #return error
-end
-
 
 
 
 @everywhere function Inertial(r, v, m, dt, t_end)
-    intr = r
-    intv = v
+    intr = copy(r)
+    intv = copy(v)
     e0, m0, a0 = initialize(r,v,m) #calculate initial quantities
     results=hcat(hcat(reshape(r,(1,6)),reshape(v,(1,6))),zeros(Float128,(1,5))) #initialize array for results
     resolution = convert(Int64, round((t_end/dt)/1000, digits=0))#1000 datapoints per sim
@@ -282,12 +263,12 @@ end
     #main loop
     step = 0 #initialize step counter
     for t in 0:dt:t_end
-        old_r = r #save old values
-        old_v = v
-        old_a = a
-        old_jk = jk
-        old_s = s
-        old_c = c
+        old_r = copy(r) #save old values
+        old_v = copy(v)
+        old_a = copy(a)
+        old_jk = copy(jk)
+        old_s = copy(s)
+        old_c = copy(c)
         #predictor (Taylor series)
         pr = r + v*dt + a*(dt^2)/2 + jk*(dt^3)/6 + s*(dt^4)/24 + c*(dt^5)/120
         pv = v + a*dt + jk*(dt^2)/2 + s*(dt^3)/6 + c*(dt^4)/24
@@ -375,10 +356,10 @@ using SharedArrays
 Results = SharedArray{Float64}(results)
 addprocs(4)
 
-for  i in 3:6 #1000 up to 1,000,000 steps
-    t_end=dt*10^i
-    for  j in 1:13
-        
+for  i in 3:6 
+    t_end=dt*10^i #1e3, 1e4 , 1e5, 1e6 steps
+    for  j in 1:13 #run 3*13+1 = 40 tests
+        #run speed tests in parallel on cores 2-4, reserve core 1 as master command
         b = remotecall(runR,2, r, v, m, dt, t_end)
         c = remotecall(runR,3, r, v, m, dt, t_end)
         d = remotecall(runR,4, r, v, m, dt, t_end)
