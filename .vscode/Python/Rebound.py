@@ -83,4 +83,3 @@ for i in range(3,7):
 
 import matplotlib.pyplot as plt
 
-s
