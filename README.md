@@ -14,3 +14,6 @@ DataFrames (To facilitate saving data as CSV)\
 CSV (To save data as CSV)\
 Plots (For making rudimentary plots)
 
+## Data:
+The raw data is included in this repository. [A Google Colab Notebook](https://colab.research.google.com/drive/1LX6dTDEkx27fDUC6TBX98CG4ZHpKpblv?usp=sharing) was used to clean the data and generate figures.
+
