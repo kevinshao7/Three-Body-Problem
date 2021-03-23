@@ -291,7 +291,7 @@ function phase1_r(r,v,m)#refine velocities
         end
     end
     println("DONE")
-    println("Phase 2 Positions:",r)
+    println("Phase 1 Positions:",r)
 end
 
 #phase1_r(r,v,m)
@@ -304,12 +304,12 @@ function phase2_v(r,v,m)#refine velocities
 
 
             v_results[1,1:3] = v[body,:]
-            println("v=",v)
+
             coarse_p, coarse_r, coarse_v = run(r,v,m,1e-3,92.7,1000,r,v)
-            println("v=",v)
+
 
             fine_p, fine_r, fine_v = run(coarse_r,coarse_v,m,1e-4,0.3,1,r,v)
-            println("v=",v)
+
 
             v_results[1,4] = fine_p
             for i in 2:1332
@@ -348,7 +348,7 @@ function phase2_v(r,v,m)#refine velocities
                 v_results[i+1, 4] = fine2_p #save periodicity error into results
                 v_results[i+444, 4] = fine3_p
                 v_results[i+887, 4] = fine4_p
-                println("progress = ",i,"/443")
+                println("progress = ",i,"/443"," body ",body," depth ",depth)
             end
             #cases 1330:1331
 
@@ -369,6 +369,7 @@ function phase2_v(r,v,m)#refine velocities
             fine3 = remotecall(run,3, coarse3_r, coarse3_v, m,  1e-4,0.3,1, r, core3_intv)
 
             fine2_p, fine2_r, fine2_v = fetch(fine2) #fetch fine
+            fine3_p, fine3_r, fine3_v = fetch(fine3) #fetch fine
 
             v_results[1331, 4] = fine2_p #save periodicity error into results
             v_results[1332, 4] = fine3_p
@@ -386,13 +387,13 @@ function phase2_v(r,v,m)#refine velocities
             println("argmin =",row)
             println("minimum error =",minimum(v_results[2:1332,4]))
             df = convert(DataFrame,v_results)
-            name = string("Phase3V/3/22,B",body,"D",depth,".csv")
+            name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase3V_3_22,B",body,"D",depth,".csv")
             rename!(df,[:"x cord",:"y cord",:"z cord",:"periodicity error"])
             CSV.write(name,df)
         end
     end
     println("DONE")
-    println("Phase 3 Velocities:",v)
+    println("Phase 2 Velocities:",v)
 end
 
 phase2_v(r,v,m)

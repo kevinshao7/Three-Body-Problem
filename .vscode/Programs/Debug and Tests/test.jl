@@ -317,7 +317,7 @@ function phase2_v(r,v,m)#refine velocities
     end
     v_results[2:1332,1:3] += searchtable/10^(depth+1)
     #search iteration
-    for i in 1:2
+    for i in 1:1
     
         core2_intv = copy(v) #initialize core velocities
         core3_intv = copy(v)
@@ -348,7 +348,7 @@ function phase2_v(r,v,m)#refine velocities
         v_results[i+1, 4] = fine2_p #save periodicity error into results
         v_results[i+444, 4] = fine3_p
         v_results[i+887, 4] = fine4_p
-        println("progress = ",i,"/443")
+        println("progress = ",i,"/443"," body ",body," depth ",depth)
     end
     #cases 1330:1331
 
@@ -387,12 +387,12 @@ function phase2_v(r,v,m)#refine velocities
     println("argmin =",row)
     println("minimum error =",minimum(v_results[2:1332,4]))
     df = convert(DataFrame,v_results)
-    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase3V/3/22,B",body,"D",depth,".csv")
+    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase3V_3_22,B",body,"D",depth,".csv")
     rename!(df,[:"x cord",:"y cord",:"z cord",:"periodicity error"])
     CSV.write(name,df)
 
     println("DONE")
-    println("Phase 3 Velocities:",v)
+    println("Phase 2 Velocities:",v)
 end
 
 phase2_v(r,v,m)
