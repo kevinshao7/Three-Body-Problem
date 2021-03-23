@@ -285,7 +285,7 @@ function phase1_r(r,v,m)#refine velocities
             println("argmin =",row)
             println("minimum error =",minimum(r_results[2:1332,4]))
             df = convert(DataFrame,r_results)
-            name = string("Phase2Rtest,B",body,"D",depth,".csv")
+            name = string("Phase2R/3/22,B",body,"D",depth,".csv")
             rename!(df,[:"x cord",:"y cord",:"z cord",:"periodicity error"])
             CSV.write(name,df)
         end
@@ -386,7 +386,7 @@ function phase2_v(r,v,m)#refine velocities
             println("argmin =",row)
             println("minimum error =",minimum(v_results[2:1332,4]))
             df = convert(DataFrame,v_results)
-            name = string("Phase3Vtest,B",body,"D",depth,".csv")
+            name = string("Phase3V/3/22,B",body,"D",depth,".csv")
             rename!(df,[:"x cord",:"y cord",:"z cord",:"periodicity error"])
             CSV.write(name,df)
         end
