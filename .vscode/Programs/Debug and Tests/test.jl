@@ -164,7 +164,7 @@ end
         
     end
 
-    return argmin(periodicity_error[2:end]), minimum(periodicity_error[2:end]), r, v #don't return early phases when close to start
+    return resolution*dt*argmin(periodicity_error[2:end]), minimum(periodicity_error[2:end]), r, v #don't return early phases when close to start
 end
 
 
@@ -409,7 +409,7 @@ function phase0_am(r,v,m)#refine angular velocities
     end
     zarray = am_results[:,1]
     #search iteration
-    for i in 1:1
+    for i in 1:667
     
         core2_intv = copy(v) #initialize core velocities
         core3_intv = copy(v)
@@ -465,4 +465,88 @@ function phase0_am(r,v,m)#refine angular velocities
     println("Phase 0 Angular Velocities:",v)
 end
 
-phase0_am(r,v,m)
+#phase0_am(intr,intv,m)
+
+@everywhere function positions_search_table() 
+    searchtable = [0 0]
+    for i in -10:10
+        for j in -10:10
+            searchtable = vcat(searchtable,[i j])
+        end
+    end
+    return searchtable[2:end,:]
+end
+
+
+
+function phase4_r(r,v,m,order)#refine positions velocities
+
+    am_results = zeros(Float128, (441, 4)) #initialize results
+    searchtable = positions_search_table()
+    for i in 1:441
+        am_results[i,1:2] = order*copy(searchtable[i,1:2])
+    end
+
+    #search iteration
+    for i in 1:147
+    
+        core2_intr = copy(r) #initialize core velocities
+        core3_intr = copy(r)
+        core4_intr = copy(r)
+        
+        core2_intr[1,1] += am_results[i,1]#grid search parameters
+        core2_intr[2,2] += am_results[i,2]
+        core2_intr[3,2] -= am_results[i,2]
+        core3_intr[1,1] += am_results[i+147,1]#grid search parameters
+        core3_intr[2,2] += am_results[i+147,2]
+        core3_intr[3,2] -= am_results[i+147,2]
+        core4_intr[1,1] += am_results[i+294,1]#grid search parameters
+        core4_intr[2,2] += am_results[i+294,2]
+        core4_intr[3,2] -= am_results[i+294,2]
+        
+        #period ~ 92.8
+        coarse2 = remotecall(run,2, core2_intr, v, m, 1e-3,30,1000, core2_intr, v)#coarse simulation
+        coarse3 = remotecall(run,3, core3_intr, v, m, 1e-3,30,1000, core3_intr, v)
+        coarse4 = remotecall(run,4, core4_intr, v, m, 1e-3,30,1000, core4_intr, v)
+        
+        coarse2_p, coarse2_e, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
+        coarse3_p, coarse3_e, coarse3_r, coarse3_v = fetch(coarse3)
+        coarse4_p, coarse4_e, coarse4_r, coarse4_v = fetch(coarse4)
+        
+        fine2 = remotecall(run,2, coarse2_r, coarse2_v, m, 1e-3,80,1, core2_intr, v)#fine simulation
+        fine3 = remotecall(run,3, coarse3_r, coarse3_v, m, 1e-3,80,1, core3_intr, v)
+        fine4 = remotecall(run,4, coarse4_r, coarse4_v, m, 1e-3,80,1, core4_intr, v)
+        
+        fine2_p, fine2_e, fine2_r, fine2_v = fetch(fine2) #fetch fine
+        fine3_p, fine3_e, fine3_r, fine3_v = fetch(fine3)
+        fine4_p, fine4_e, fine4_r, fine4_v = fetch(fine4)
+
+        am_results[i, 3] = fine2_e #save periodicity error into results
+        am_results[i+147, 3] = fine3_e
+        am_results[i+294, 3] = fine4_e
+        am_results[i, 4] = fine2_p #save periodicity error into results
+        am_results[i+147, 4] = fine3_p
+        am_results[i+294, 4] = fine4_p
+        println("progress = ",i,"/147")
+    end
+
+    sleep(2)
+    row = argmin(am_results[:,3])
+    println(am_results[row,1:2])
+    newr = copy(r)
+    newr[1,1] += am_results[i,1]#grid search parameters
+    newr[2,2] += am_results[i,2]
+    newr[3,2] -= am_results[i,2]
+    println("argmin =",row)
+    println("results =",am_results[row,1:2])
+    println("newr =",newr)
+    println("minimum error =",minimum(am_results[:,3]))
+    println("period =",am_results[row,4])
+    df = convert(DataFrame,am_results)
+    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase4R_3_23.csv")
+    rename!(df,[:"23Ry",:"1Rx",:"periodicity error",:"period"])
+    CSV.write(name,df)
+
+    println("DONE")
+end
+phase4_r(intr,intv,m,1e-3)
