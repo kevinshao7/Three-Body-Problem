@@ -9,8 +9,8 @@ using SharedArrays
 -5.40556847423408105134957741609652478e-01 3.45281693188283016303154284469911822e-01 0.;
 -5.40508088505425823287375981275225727e-01 -3.45274810552283676957903446556133749e-01 0.]
 @everywhere intv =[2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.;
-1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 0.;
- -1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 0.]
+1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 9.85900000000000109601216990995453671e-02;
+ -1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 9.85900000000000109601216990995453671e-02]
 m = [1 1 1]
 #period ~ 6.325913985
 
@@ -398,13 +398,15 @@ end
 
 #phase2_v(r,v,m)
 
+#search 2
 function phase0_am(r,v,m)#refine angular velocities
 
     am_results = zeros(Float128, (2001, 2)) #initialize results
-    zarray = LinRange(0.09, 0.11, 2001)
+    zarray = LinRange(-0.001, 0.001, 2001)
 
     for i in 1:2001
         am_results[i,1] = copy(zarray[i])
+        am_results += 9.85900000000000109601216990995453671e-02
     end
     #search iteration
     for i in 1:667
@@ -452,7 +454,7 @@ function phase0_am(r,v,m)#refine angular velocities
     println("z =",am_results[row,1])
     println("minimum error =",minimum(am_results[:,2]))
     df = convert(DataFrame,am_results)
-    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase0AM_3_22.csv")
+    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase0AM_3_23(2).csv")
     rename!(df,[:"Vz",:"periodicity error"])
     CSV.write(name,df)
 
