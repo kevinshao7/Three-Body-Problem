@@ -549,4 +549,19 @@ function phase4_r(r,v,m,order)#refine positions velocities
 
     println("DONE")
 end
-phase4_r(intr,intv,m,1e-3)
+#phase4_r(intr,intv,m,1e-3)
+
+
+df = CSV.read("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase4R_3_23.csv",DataFrame)
+am_results = convert(Array, df)
+row = argmin(am_results[:,3])
+println(am_results[row,1:2])
+newr = copy(r)
+newr[1,1] += am_results[row,1]#grid search parameters
+newr[2,2] += am_results[row,2]
+newr[3,2] -= am_results[row,2]
+println("argmin =",row)
+println("results =",am_results[row,1:2])
+println("newr =",newr)
+println("minimum error =",minimum(am_results[:,3]))
+println("period =",am_results[row,4])
