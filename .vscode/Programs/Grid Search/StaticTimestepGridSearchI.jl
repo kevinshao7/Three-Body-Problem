@@ -5,9 +5,7 @@ using SharedArrays
 #specify cores using command -p 4
 
 #best estimate
-@everywhere intr = [1.08105966433283395241374390321269010e+00 -1.61103999936333666101824156054682023e-06 0.;
--5.40556847423408105134957741609652478e-01 3.45281693188283016303154284469911822e-01 0.;
--5.40508088505425823287375981275225727e-01 -3.45274810552283676957903446556133749e-01 0.]
+@everywhere intr = [1.0710596643328338 -1.6110399993633367e-6 0.0; -0.5405568474234081 0.335281693188283 0.0; -0.5405080885054259 -0.33527481055228364 0.0]
 @everywhere intv =[2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.;
 1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 9.85900000000000109601216990995453671e-02 ;
  -1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 -9.85900000000000109601216990995453671e-02]
@@ -543,10 +541,10 @@ function phase4_r(r,v,m,order)#refine positions velocities
     println("minimum error =",minimum(am_results[:,3]))
     println("period =",am_results[row,4])
     df = convert(DataFrame,am_results)
-    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase4R_3_23.csv")
+    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase4R_3_23_1e-4.csv")
     rename!(df,[:"23Ry",:"1Rx",:"periodicity error",:"period"])
     CSV.write(name,df)
 
     println("DONE")
 end
-phase4_r(intr,intv,m,1e-3)
+phase4_r(intr,intv,m,1e-4)
