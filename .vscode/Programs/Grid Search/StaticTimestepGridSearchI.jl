@@ -5,9 +5,6 @@ using SharedArrays
 #specify cores using command -p 4
 
 
-[1.08305966433283	-1.61103999936333e-06	 0.;
--0.540556847423408	0.00999838896000064	 0.;
--0.540508088505425	-0.355274810552283	0.]
 
 
 #best estimate
@@ -413,18 +410,18 @@ function phase0_am(r,v,m)#refine angular velocities
     end
     zarray = am_results[:,1]
     #search iteration
-    for i in 1:667
+    for i in 1:1
     
         core2_intv = copy(v) #initialize core velocities
         core3_intv = copy(v)
         core4_intv = copy(v)
         
-        core2_intv[2,3] += zarray[i]#grid search parameters
-        core2_intv[3,3] -= zarray[i]
-        core3_intv[2,3] += zarray[i+667]
-        core3_intv[3,3] -= zarray[i+667]
-        core4_intv[2,3] += zarray[i+1334]
-        core4_intv[3,3] -= zarray[i+1334]
+        core2_intv[2,3] = zarray[i]#grid search parameters
+        core2_intv[3,3] = -zarray[i]
+        core3_intv[2,3] = zarray[i+667]
+        core3_intv[3,3] = -zarray[i+667]
+        core4_intv[2,3] = zarray[i+1334]
+        core4_intv[3,3] = -zarray[i+1334]
         
         #period ~ 92.8
         coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3,30,1000, r, core2_intv)#coarse simulation
@@ -450,8 +447,10 @@ function phase0_am(r,v,m)#refine angular velocities
         am_results[i+667, 3] = fine3_p
         am_results[i+1334, 3] = fine4_p
         println("progress = ",i,"/667")
+        println("Core2intv = ", core2_intv)
+        println(fine2_e)
+        println(fine2_p)
     end
-
     sleep(2)
     row = argmin(am_results[:,2])
     println(am_results[row,1])
