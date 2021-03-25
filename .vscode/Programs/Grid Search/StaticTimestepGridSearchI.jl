@@ -410,7 +410,7 @@ function phase0_am(r,v,m)#refine angular velocities
     end
     zarray = am_results[:,1]
     #search iteration
-    for i in 1:1
+    for i in 1:667
     
         core2_intv = copy(v) #initialize core velocities
         core3_intv = copy(v)
