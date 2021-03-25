@@ -409,7 +409,7 @@ function phase0_am(r,v,m)#refine angular velocities
     zrange = LinRange(-0.00001, 0.00001, 2001)
     for i in 1:2001
         am_results[i,1] = copy(zrange[i])
-        am_results[i,1] += 9.85900000000000109601216990995453671e-02
+        am_results[i,1] += v[2,3]
     end
     zarray = am_results[:,1]
     #search iteration
@@ -419,7 +419,6 @@ function phase0_am(r,v,m)#refine angular velocities
         core3_intv = copy(v)
         core4_intv = copy(v)
         
-        println(zarray[i])
         core2_intv[2,3] += zarray[i]#grid search parameters
         core2_intv[3,3] -= zarray[i]
         core3_intv[2,3] += zarray[i+667]
@@ -456,20 +455,22 @@ function phase0_am(r,v,m)#refine angular velocities
     sleep(2)
     row = argmin(am_results[:,2])
     println(am_results[row,1])
-    
+    newv = copy(v)
+    newv[2,3] = am_results[row,1]
+    newv[3,3] = -am_results[row,1]
     println("argmin =",row)
     println("z =",am_results[row,1])
     println("minimum error =",minimum(am_results[:,2]))
     df = convert(DataFrame,am_results)
-    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase0AM_3_23(2).csv")
+    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase0AM_3_24_1e-6.csv")
     rename!(df,[:"Vz",:"periodicity error",:"period"])
     CSV.write(name,df)
 
     println("DONE")
-    println("Phase 0 Angular Velocities:",v)
+    println("Phase 0 Angular Velocities:",newv)
 end
 
-#phase0_am(intr,intv,m)
+phase0_am(intr,intv,m)
 
 @everywhere function positions_search_table() 
     searchtable = [0 0]
@@ -553,4 +554,4 @@ function phase4_r(r,v,m,order)#refine positions velocities
 
     println("DONE")
 end
-phase4_r(intr,intv,m,1e-5)
+#phase4_r(intr,intv,m,1e-5)

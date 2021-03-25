@@ -4,13 +4,17 @@ using SharedArrays
 @everywhere using Quadmath
 #specify cores using command -p 4
 
+
+[1.08305966433283	-1.61103999936333e-06	 0.;
+-0.540556847423408	0.00999838896000064	 0.;
+-0.540508088505425	-0.355274810552283	0.]
+
+
 #best estimate
-@everywhere intr = [1.08105966433283395241374390321269010e+00 -1.61103999936333666101824156054682023e-06 0.;
--5.40556847423408105134957741609652478e-01 3.45281693188283016303154284469911822e-01 0.;
--5.40508088505425823287375981275225727e-01 -3.45274810552283676957903446556133749e-01 0.]
+@everywhere intr =[1.0919596643328338 -1.6110399993633367e-6 0.0; -0.5405568474234081 0.347481693188283 0.0; -0.5405080885054259 -0.34747481055228363 0.0]
 @everywhere intv =[2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.;
-1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 0.;
- -1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 0.]
+1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 9.85900000000000109601216990995453671e-02 ;
+ -1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 -9.85900000000000109601216990995453671e-02]
 m = [1 1 1]
 #period ~ 6.325913985
 
@@ -405,7 +409,7 @@ function phase0_am(r,v,m)#refine angular velocities
     zrange = LinRange(-0.00001, 0.00001, 2001)
     for i in 1:2001
         am_results[i,1] = copy(zrange[i])
-        am_results[i,1] += 9.85900000000000109601216990995453671e-02
+        am_results[i,1] += v[2,3]
     end
     zarray = am_results[:,1]
     #search iteration
@@ -415,7 +419,6 @@ function phase0_am(r,v,m)#refine angular velocities
         core3_intv = copy(v)
         core4_intv = copy(v)
         
-        println(zarray[i])
         core2_intv[2,3] += zarray[i]#grid search parameters
         core2_intv[3,3] -= zarray[i]
         core3_intv[2,3] += zarray[i+667]
@@ -452,20 +455,22 @@ function phase0_am(r,v,m)#refine angular velocities
     sleep(2)
     row = argmin(am_results[:,2])
     println(am_results[row,1])
-    
+    newv = copy(v)
+    newv[2,3] = am_results[row,1]
+    newv[3,3] = -am_results[row,1]
     println("argmin =",row)
     println("z =",am_results[row,1])
     println("minimum error =",minimum(am_results[:,2]))
     df = convert(DataFrame,am_results)
-    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase0AM_3_23(2).csv")
+    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase0AM_3_24_1e-6.csv")
     rename!(df,[:"Vz",:"periodicity error",:"period"])
     CSV.write(name,df)
 
     println("DONE")
-    println("Phase 0 Angular Velocities:",v)
+    println("Phase 0 Angular Velocities:",newv)
 end
 
-#phase0_am(intr,intv,m)
+phase0_am(intr,intv,m)
 
 @everywhere function positions_search_table() 
     searchtable = [0 0]
@@ -534,34 +539,19 @@ function phase4_r(r,v,m,order)#refine positions velocities
     row = argmin(am_results[:,3])
     println(am_results[row,1:2])
     newr = copy(r)
-    newr[1,1] += am_results[i,1]#grid search parameters
-    newr[2,2] += am_results[i,2]
-    newr[3,2] -= am_results[i,2]
+    newr[1,1] += am_results[row,1]#grid search parameters
+    newr[2,2] += am_results[row,2]
+    newr[3,2] -= am_results[row,2]
     println("argmin =",row)
     println("results =",am_results[row,1:2])
     println("newr =",newr)
     println("minimum error =",minimum(am_results[:,3]))
     println("period =",am_results[row,4])
     df = convert(DataFrame,am_results)
-    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase4R_3_23.csv")
+    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase4R_3_24_1e-5.csv")
     rename!(df,[:"23Ry",:"1Rx",:"periodicity error",:"period"])
     CSV.write(name,df)
 
     println("DONE")
 end
-#phase4_r(intr,intv,m,1e-3)
-
-
-df = CSV.read("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase4R_3_23.csv",DataFrame)
-am_results = convert(Array, df)
-row = argmin(am_results[:,3])
-println(am_results[row,1:2])
-newr = copy(r)
-newr[1,1] += am_results[row,1]#grid search parameters
-newr[2,2] += am_results[row,2]
-newr[3,2] -= am_results[row,2]
-println("argmin =",row)
-println("results =",am_results[row,1:2])
-println("newr =",newr)
-println("minimum error =",minimum(am_results[:,3]))
-println("period =",am_results[row,4])
+#phase4_r(intr,intv,m,1e-5)
