@@ -547,7 +547,7 @@ function phase4_r(r,v,m,order)#refine positions velocities
     println("minimum error =",minimum(am_results[:,3]))
     println("period =",am_results[row,4])
     df = convert(DataFrame,am_results)
-    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase4R_3_23_1e-4.csv")
+    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase4R_3_24_1e-4.csv")
     rename!(df,[:"23Ry",:"1Rx",:"periodicity error",:"period"])
     CSV.write(name,df)
 
