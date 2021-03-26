@@ -400,73 +400,78 @@ end
 #phase2_v(r,v,m)
 
 #search 2
-function phase0_am(r,v,m)#refine angular velocities
+function phase0_am(r,intv,m)#refine angular velocities
+    v = copy(intv)
+    for order in 2:6
+        am_results = zeros(Float128, (21, 3)) #initialize results
+        zrange = LinRange(-10, 10, 21)
+        zrange = zrange/(10^order)
+        for i in 1:21
+            am_results[i,1] = copy(zrange[i])
+            am_results[i,1] += v[2,3]
+        end
+        zarray = am_results[:,1]
+        #search iteration
+        for i in 1:7
+        
+            core2_intv = copy(v) #initialize core velocities
+            core3_intv = copy(v)
+            core4_intv = copy(v)
+            
+            core2_intv[2,3] = zarray[i]#grid search parameters
+            core2_intv[3,3] = -zarray[i]
+            core3_intv[2,3] = zarray[i+7]
+            core3_intv[3,3] = -zarray[i+7]
+            core4_intv[2,3] = zarray[i+14]
+            core4_intv[3,3] = -zarray[i+14]
+            
+            #period ~ 92.8
+            coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3,30,1000, r, core2_intv)#coarse simulation
+            coarse3 = remotecall(run,3, r, core3_intv, m,  1e-3,30,1000, r, core3_intv)
+            coarse4 = remotecall(run,4, r, core4_intv, m,  1e-3,30,1000, r, core4_intv)
+            
+            coarse2_p, coarse2_e, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
+            coarse3_p, coarse3_e, coarse3_r, coarse3_v = fetch(coarse3)
+            coarse4_p, coarse4_e, coarse4_r, coarse4_v = fetch(coarse4)
+            
+            fine2 = remotecall(run,2, coarse2_r, coarse2_v, m, 1e-3,80,1, r, core2_intv)#fine simulation
+            fine3 = remotecall(run,3, coarse3_r, coarse3_v, m,  1e-3,80,1, r, core3_intv)
+            fine4 = remotecall(run,4, coarse4_r, coarse4_v, m,  1e-3,80,1, r, core4_intv)
+            
+            fine2_p, fine2_e, fine2_r, fine2_v = fetch(fine2) #fetch fine
+            fine3_p, fine3_e, fine3_r, fine3_v = fetch(fine3)
+            fine4_p, fine4_e, fine4_r, fine4_v = fetch(fine4)
 
-    am_results = zeros(Float128, (2001, 3)) #initialize results
-    zrange = LinRange(-0.00001, 0.00001, 2001)
-    for i in 1:2001
-        am_results[i,1] = copy(zrange[i])
-        am_results[i,1] += v[2,3]
-    end
-    zarray = am_results[:,1]
-    #search iteration
-    for i in 1:667
-    
-        core2_intv = copy(v) #initialize core velocities
-        core3_intv = copy(v)
-        core4_intv = copy(v)
-        
-        core2_intv[2,3] = zarray[i]#grid search parameters
-        core2_intv[3,3] = -zarray[i]
-        core3_intv[2,3] = zarray[i+667]
-        core3_intv[3,3] = -zarray[i+667]
-        core4_intv[2,3] = zarray[i+1334]
-        core4_intv[3,3] = -zarray[i+1334]
-        
-        #period ~ 92.8
-        coarse2 = remotecall(run,2, r, core2_intv, m, 1e-3,30,1000, r, core2_intv)#coarse simulation
-        coarse3 = remotecall(run,3, r, core3_intv, m,  1e-3,30,1000, r, core3_intv)
-        coarse4 = remotecall(run,4, r, core4_intv, m,  1e-3,30,1000, r, core4_intv)
-        
-        coarse2_p, coarse2_e, coarse2_r, coarse2_v = fetch(coarse2) #fetch coarse
-        coarse3_p, coarse3_e, coarse3_r, coarse3_v = fetch(coarse3)
-        coarse4_p, coarse4_e, coarse4_r, coarse4_v = fetch(coarse4)
-        
-        fine2 = remotecall(run,2, coarse2_r, coarse2_v, m, 1e-3,80,1, r, core2_intv)#fine simulation
-        fine3 = remotecall(run,3, coarse3_r, coarse3_v, m,  1e-3,80,1, r, core3_intv)
-        fine4 = remotecall(run,4, coarse4_r, coarse4_v, m,  1e-3,80,1, r, core4_intv)
-        
-        fine2_p, fine2_e, fine2_r, fine2_v = fetch(fine2) #fetch fine
-        fine3_p, fine3_e, fine3_r, fine3_v = fetch(fine3)
-        fine4_p, fine4_e, fine4_r, fine4_v = fetch(fine4)
+            am_results[i, 2] = fine2_e #save periodicity error into results
+            am_results[i+7, 2] = fine3_e
+            am_results[i+14, 2] = fine4_e
+            am_results[i, 3] = fine2_p #save periodicity error into results
+            am_results[i+7, 3] = fine3_p
+            am_results[i+14, 3] = fine4_p
+            println("progress = ",i,"/7","order = -1e",order)
+            println("Core2intv = ", core2_intv)
+            println(fine2_e)
+            println(fine2_p)
+        end
+        sleep(2)
+        row = argmin(am_results[:,2])
+        println(am_results[row,1])
+        newv = copy(v)
+        newv[2,3] = am_results[row,1]
+        newv[3,3] = -am_results[row,1]
+        v = copy(newv)
+        println("argmin =",row)
+        println("z =",am_results[row,1])
+        println("minimum error =",minimum(am_results[:,2]))
+        df = convert(DataFrame,am_results)
+        name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase0AM_3_24_1e-",order,".csv")
+        rename!(df,[:"Vz",:"periodicity error",:"period"])
+        CSV.write(name,df)
 
-        am_results[i, 2] = fine2_e #save periodicity error into results
-        am_results[i+667, 2] = fine3_e
-        am_results[i+1334, 2] = fine4_e
-        am_results[i, 3] = fine2_p #save periodicity error into results
-        am_results[i+667, 3] = fine3_p
-        am_results[i+1334, 3] = fine4_p
-        println("progress = ",i,"/667")
-        println("Core2intv = ", core2_intv)
-        println(fine2_e)
-        println(fine2_p)
     end
-    sleep(2)
-    row = argmin(am_results[:,2])
-    println(am_results[row,1])
-    newv = copy(v)
-    newv[2,3] = am_results[row,1]
-    newv[3,3] = -am_results[row,1]
-    println("argmin =",row)
-    println("z =",am_results[row,1])
-    println("minimum error =",minimum(am_results[:,2]))
-    df = convert(DataFrame,am_results)
-    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase0AM_3_24_1e-6.csv")
-    rename!(df,[:"Vz",:"periodicity error",:"period"])
-    CSV.write(name,df)
 
     println("DONE")
-    println("Phase 0 Angular Velocities:",newv)
+    println("Phase 0 Angular Velocities:",v)
 end
 
 phase0_am(intr,intv,m)
