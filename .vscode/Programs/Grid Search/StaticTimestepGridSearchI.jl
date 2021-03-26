@@ -402,7 +402,7 @@ end
 #search 2
 function phase0_am(r,intv,m)#refine angular velocities
     v = copy(intv)
-    for order in 2:6
+    for order in 1:6
         am_results = zeros(Float128, (21, 3)) #initialize results
         zrange = LinRange(-10, 10, 21)
         zrange = zrange/(10^order)
