@@ -8,7 +8,8 @@ using SharedArrays
 
 
 #best estimate
-@everywhere intr =[1.09105966433283384751928846156943109e+00 -1.61103999936333674313946803802188867e-06 0.00000000000000000000000000000000000e+00; -5.40556847423408148856083244027104229e-01 3.47281693188283000980898229670401633e-01 0.00000000000000000000000000000000000e+00; -5.40508088505425865477604929765220731e-01 -3.47274810552283650852412044685024739e-01 0.00000000000000000000000000000000000e+00]
+@everywhere intr =[1.0960596643328337 -1.6110399993633367e-6 0.0; -0.5405568474234081 0.348281693188283 0.0; -0.5405080885054259 -0.34827481055228365 0.0]
+
 @everywhere intv =[2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.;
 1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 9.85900000000000109601216990995453671e-02 ;
  -1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 -9.85900000000000109601216990995453671e-02]
@@ -494,6 +495,8 @@ function phase4_r(r,v,m,order)#refine positions velocities
     searchtable = positions_search_table()
     for i in 1:441
         am_results[i,1:2] = order*copy(searchtable[i,1:2])
+        am_results[i,1] += r[1,1]
+        am_results[i,2] += r[2,2]
     end
 
     #search iteration
@@ -503,15 +506,15 @@ function phase4_r(r,v,m,order)#refine positions velocities
         core3_intr = copy(r)
         core4_intr = copy(r)
         
-        core2_intr[1,1] += am_results[i,1]#grid search parameters
-        core2_intr[2,2] += am_results[i,2]
-        core2_intr[3,2] -= am_results[i,2]
-        core3_intr[1,1] += am_results[i+147,1]#grid search parameters
-        core3_intr[2,2] += am_results[i+147,2]
-        core3_intr[3,2] -= am_results[i+147,2]
-        core4_intr[1,1] += am_results[i+294,1]#grid search parameters
-        core4_intr[2,2] += am_results[i+294,2]
-        core4_intr[3,2] -= am_results[i+294,2]
+        core2_intr[1,1] = am_results[i,1]#grid search parameters
+        core2_intr[2,2] = am_results[i,2]
+        core2_intr[3,2] = -am_results[i,2]
+        core3_intr[1,1] = am_results[i+147,1]#grid search parameters
+        core3_intr[2,2] = am_results[i+147,2]
+        core3_intr[3,2] = -am_results[i+147,2]
+        core4_intr[1,1] = am_results[i+294,1]#grid search parameters
+        core4_intr[2,2] = am_results[i+294,2]
+        core4_intr[3,2] = -am_results[i+294,2]
         
         #period ~ 92.8
         coarse2 = remotecall(run,2, core2_intr, v, m, 1e-3,30,1000, core2_intr, v)#coarse simulation
@@ -543,16 +546,16 @@ function phase4_r(r,v,m,order)#refine positions velocities
     row = argmin(am_results[:,3])
     println(am_results[row,1:2])
     newr = copy(r)
-    newr[1,1] += am_results[row,1]#grid search parameters
-    newr[2,2] += am_results[row,2]
-    newr[3,2] -= am_results[row,2]
+    newr[1,1] = am_results[row,1]#grid search parameters
+    newr[2,2] = am_results[row,2]
+    newr[3,2] = -am_results[row,2]
     println("argmin =",row)
     println("results =",am_results[row,1:2])
     println("newr =",newr)
     println("minimum error =",minimum(am_results[:,3]))
     println("period =",am_results[row,4])
     df = convert(DataFrame,am_results)
-    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase4R_3_24_1e-5.csv")
+    name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase4R_3_26_1e-3.csv")
     rename!(df,[:"23Ry",:"1Rx",:"periodicity error",:"period"])
     CSV.write(name,df)
 
