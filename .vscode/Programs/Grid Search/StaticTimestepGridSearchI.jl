@@ -8,7 +8,7 @@ using SharedArrays
 
 
 #best estimate
-@everywhere intr =[1.0960596643328337 -1.6110399993633367e-6 0.0; -0.5405568474234081 0.348281693188283 0.0; -0.5405080885054259 -0.348281693188283 0.0]
+@everywhere intr =[1.0969596643328337 -1.6110399993633367e-6 0.0; -0.5405568474234081 0.348481693188283 0.0; -0.5405080885054259 -0.348481693188283 0.0]
 
 
 @everywhere intv =[2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.;
@@ -466,7 +466,7 @@ function phase0_am(r,intv,m)#refine angular velocities
         println("z =",am_results[row,1])
         println("minimum error =",minimum(am_results[:,2]))
         df = convert(DataFrame,am_results)
-        name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase0AM_3_24_1e-",order,".csv")
+        name = string("C:\\Users\\shaoq\\Documents\\GitHub\\rebound\\.vscode\\Programs\\Grid Search\\Grid Search Data\\Grid Search 4.0\\Phase0AM_3_26_1e-",order,".csv")
         rename!(df,[:"Vz",:"periodicity error",:"period"])
         CSV.write(name,df)
 
@@ -562,4 +562,4 @@ function phase4_r(r,v,m,order)#refine positions velocities
 
     println("DONE")
 end
-phase4_r(intr,intv,m,1e-4)
+#phase4_r(intr,intv,m,1e-4)
