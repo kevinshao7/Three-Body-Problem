@@ -476,7 +476,7 @@ function phase0_am(r,intv,m)#refine angular velocities
     println("Phase 0 Angular Velocities:",v)
 end
 
-#phase0_am(intr,intv,m)
+phase0_am(intr,intv,m)
 
 @everywhere function positions_search_table() 
     searchtable = [0 0]
