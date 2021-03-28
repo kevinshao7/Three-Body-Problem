@@ -4,13 +4,26 @@
 using Quadmath
 using LinearAlgebra
 #Setup (Rotating Figure-Eight)
-intr = [1.09105966433283384751928846156943109e+00 -1.61103999936333674313946803802188867e-06 0.00000000000000000000000000000000000e+00; -5.40556847423408148856083244027104229e-01 3.47281693188283000980898229670401633e-01 0.00000000000000000000000000000000000e+00; -5.40508088505425865477604929765220731e-01 -3.47274810552283650852412044685024739e-01 0.00000000000000000000000000000000000e+00]
-intv =[2.75243295633073549888088404898033989e-05 4.67209878061247366553801605406549997e-01 0.;
-1.09709414564358525218941225169958387e+00 -2.33529804567645806032430881887516834e-01 9.85800000000000109593036685604050540e-02;
- -1.09713166997314851403413883510571396e+00 -2.33670073493601606031632948953538829e-01 -9.85800000000000109593036685604050540e-02]
-m = [1 1 1]
-dt = 1e-4
-t_end = 130
+
+
+ra	=0.540729000000
+rb	=0.345282000000
+va	=1.097094000000
+vb	=0.233430000000
+vz =0.099300000000
+			
+
+intr = [ra*2 0. 0.;
+-ra rb 0.;
+-ra -rb 0.]
+
+intv =[0. vb*2 0.;
+va -vb vz ;
+ -va -vb -vz]
+
+ m = [1 1 1]
+dt = 1e-3
+t_end = 200
 sum_mass = 3
 r = zeros(Float128,(3,3)) #initialize positions and vectors as Float128
 v = zeros(Float128,(3,3))
@@ -18,7 +31,19 @@ for i in 1:3,j in 1:3 #read data into Float128 arrays (Julia is finnicky in this
     r[i,j]=intr[i,j]
     v[i,j]=intv[i,j]
 end
+momentum = v[1,:]+v[2,:]+v[3,:]
+intv = copy(v)
+for i in 1:3
+    intv[i,:] -= momentum/3
+end
+v =copy(intv)
+print(v[1,:]+v[2,:]+v[3,:])
 
+com = (r[1,:]+r[2,:]+r[3,:])/3
+for i in 1:3
+    r[i,:] -= com
+end
+print((r[1,:]+r[2,:]+r[3,:])/3)
 
 function initialize(r,v,m) #calculate initial energy and momentum
     m0 =  zeros(Float128,(3,1))  #initialize linear momentum
@@ -58,7 +83,7 @@ function InertialError(intr,intv,r,v,m,e0,m0,a0)
             energy -= m[j]*m[i]/sqrt(ij'*ij)
         end
     end
-    return hcat(hcat(reshape(r,(1,9)),reshape(v,(1,9))),[1e18*energy/e0-1e18 1e18*sqrt(((linear_m-m0)'*(linear_m-m0))[1]) 1e18*sqrt((((angular_m-a0)'*(angular_m-a0)))[1]) maximum(perror)])
+    return hcat(hcat(reshape(r,(1,9)),reshape(v,(1,9))),hcat([1e18*energy/e0-1e18 1e18*sqrt(((linear_m-m0)'*(linear_m-m0))[1]) 1e18*sqrt((((angular_m-a0)'*(angular_m-a0)))[1]) maximum(perror)],perror))
 end
 
 
@@ -66,7 +91,7 @@ function Inertial(r, v, m, dt, t_end)
     intr = copy(r) #save initial positions and velocities
     intv = copy(v)
     e0, m0, a0 = initialize(r,v,m) #calculate initial quantities
-    results=hcat(hcat([0],hcat(reshape(r,(1,9))),hcat(reshape(v,(1,9))),zeros((1,4))))
+    results=hcat(hcat([0],hcat(reshape(r,(1,9))),hcat(reshape(v,(1,9))),zeros((1,10))))
     resolution = convert(Int64, round((t_end/dt)/100, digits=0))#100 datapoints per sim
     local a = zeros(Float128,(3,3)) #initialize variables
     local jk = zeros(Float128,(3,3))
@@ -193,7 +218,7 @@ end
 using Plots
 #plot system, various errors
 s = 1 #start 
-e = 10000 #end
+e = 2002 #end
 title = plot(title=string("6 Order Hermite Inertial, dt =",dt),ticks=false, labels=false, grid = false, showaxis = false, bottom_margin = -100Plots.px)
 results = Inertial(r, v, m, dt, t_end)
 names = ["r1" "r2" "r3"]
@@ -204,6 +229,16 @@ linear_m = plot(results[:,1],results[:,21],title="Linear Momentum Error (1e18)",
 angular_m = plot(results[:,1],results[:,22],title="Angular Momentum Error (1e18)",legend=false,linewidth = 3)
 periodicity_error = plot(results[:,1],results[:,23],title="Periodicity Error",legend=false,linewidth = 3)
 plot(title,bodies,velocities,energy,linear_m,angular_m,periodicity_error,layout=(7,1),size=(500,1000))
+savefig("6OrderInertial3D.png")
+
+title = plot(title=string("Periodicity Error, dt =",dt),ticks=false, labels=false, grid = false, showaxis = false, bottom_margin = -100Plots.px)
+r1 = plot(results[:,1],results[:,24],title="Error R1",legend=false,linewidth = 3)
+r2 = plot(results[:,1],results[:,25],title="Error R2",legend=false,linewidth = 3)
+r3 = plot(results[:,1],results[:,26],title="Error R3",legend=false,linewidth = 3)
+v1 = plot(results[:,1],results[:,27],title="Error V1",legend=false,linewidth = 3)
+v2 = plot(results[:,1],results[:,28],title="Error V2",legend=false,linewidth = 3)
+v3 = plot(results[:,1],results[:,29],title="Error V3",legend=false,linewidth = 3)
+plot(title,r1,r2,r3,v1,v2,v3,layout=(7,1),size=(500,1000))
 savefig("6OrderInertial3D.png")
 
 using CSV
