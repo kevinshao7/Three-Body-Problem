@@ -5,12 +5,19 @@ using Quadmath
 using LinearAlgebra
 #Setup (Rotating Figure-Eight)
 
+# Case 5:
+# On the continuation of periodic orbits from the planar to the three-dimensional general three-body problem
 
-ra	=0.540729000000
-rb	=0.345282000000
-va	=1.097094000000
-vb	=0.233430000000
-vz =0.099300000000
+
+
+#BEST:
+
+
+ra	=0.540329
+rb	=0.344882
+va	=1.097194
+vb	=0.23333
+vz =0.0989
 			
 
 intr = [ra*2 0. 0.;
@@ -21,10 +28,11 @@ intv =[0. vb*2 0.;
 va -vb vz ;
  -va -vb -vz]
 
- m = [1 1 1]
+m = [1. 1. 1.]
+
 dt = 1e-3
-t_end = 200
-sum_mass = 3
+t_end =500
+sum_mass = m[1]+m[2]+m[3]
 r = zeros(Float128,(3,3)) #initialize positions and vectors as Float128
 v = zeros(Float128,(3,3))
 for i in 1:3,j in 1:3 #read data into Float128 arrays (Julia is finnicky in this way)
@@ -218,7 +226,7 @@ end
 using Plots
 #plot system, various errors
 s = 1 #start 
-e = 2002 #end
+e = 5002 #end
 title = plot(title=string("6 Order Hermite Inertial, dt =",dt),ticks=false, labels=false, grid = false, showaxis = false, bottom_margin = -100Plots.px)
 results = Inertial(r, v, m, dt, t_end)
 names = ["r1" "r2" "r3"]
@@ -231,15 +239,17 @@ periodicity_error = plot(results[:,1],results[:,23],title="Periodicity Error",le
 plot(title,bodies,velocities,energy,linear_m,angular_m,periodicity_error,layout=(7,1),size=(500,1000))
 savefig("6OrderInertial3D.png")
 
+s = 1
+e = 5002
 title = plot(title=string("Periodicity Error, dt =",dt),ticks=false, labels=false, grid = false, showaxis = false, bottom_margin = -100Plots.px)
-r1 = plot(results[:,1],results[:,24],title="Error R1",legend=false,linewidth = 3)
-r2 = plot(results[:,1],results[:,25],title="Error R2",legend=false,linewidth = 3)
-r3 = plot(results[:,1],results[:,26],title="Error R3",legend=false,linewidth = 3)
-v1 = plot(results[:,1],results[:,27],title="Error V1",legend=false,linewidth = 3)
-v2 = plot(results[:,1],results[:,28],title="Error V2",legend=false,linewidth = 3)
-v3 = plot(results[:,1],results[:,29],title="Error V3",legend=false,linewidth = 3)
+r1 = plot(results[s:e,1],results[s:e,24],title="Error R1",legend=false,linewidth = 3)
+r2 = plot(results[s:e,1],results[s:e,25],title="Error R2",legend=false,linewidth = 3)
+r3 = plot(results[s:e,1],results[s:e,26],title="Error R3",legend=false,linewidth = 3)
+v1 = plot(results[s:e,1],results[s:e,27],title="Error V1",legend=false,linewidth = 3)
+v2 = plot(results[s:e,1],results[s:e,28],title="Error V2",legend=false,linewidth = 3)
+v3 = plot(results[s:e,1],results[s:e,29],title="Error V3",legend=false,linewidth = 3)
 plot(title,r1,r2,r3,v1,v2,v3,layout=(7,1),size=(500,1000))
-savefig("6OrderInertial3D.png")
+savefig("6OrderInertialPeriodicity.png")
 
 using CSV
 using DataFrames

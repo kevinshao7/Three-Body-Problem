@@ -259,7 +259,7 @@ function phase5_together(r,v,m,order,ncores)#refine positions velocities
         coarseprocess = Array{Future,1}(undef, ncores)
 
         for j in 1:ncores
-            coarseprocess[j] = remotecall(run,j, coreintr[:,:,j], coreintv[:,:,j], m, 1e-3,100,1000, coreintr[:,:,j], coreintv[:,:,j])
+            coarseprocess[j] = remotecall(run,j, coreintr[:,:,j], coreintv[:,:,j], m, 1e-3,92.5,1000, coreintr[:,:,j], coreintv[:,:,j])
         end
         for j in 1:ncores
             coarse_p[j],coarse_e[j],coarse_r[:,:,j],coarse_v[:,:,j] = fetch(coarseprocess[j])
@@ -273,7 +273,7 @@ function phase5_together(r,v,m,order,ncores)#refine positions velocities
         fine_v = zeros(3,3,ncores)
         fineprocess = Array{Future,1}(undef, ncores)
         for j in 1:ncores
-            fineprocess[j] = remotecall(run,j, coarse_r[:,:,j], coarse_v[:,:,j], m, 1e-3,80,1, coreintr[:,:,j], coreintv[:,:,j])
+            fineprocess[j] = remotecall(run,j, coarse_r[:,:,j], coarse_v[:,:,j], m, 1e-4,0.5,1, coreintr[:,:,j], coreintv[:,:,j])
         end
         for j in 1:ncores
             fine_p[j],fine_e[j],fine_r[:,:,j],fine_v[:,:,j] = fetch(fineprocess[j])
