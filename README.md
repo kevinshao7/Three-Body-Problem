@@ -1,5 +1,5 @@
 # Three-Body-Problem
-#### Kevin Shao, 2021 ISEF Team Canada Candidate, London Central Secondary School
+#### Kevin Shao, 2021 CWSF Finalist, London Central Secondary School
 ## Function:
 The focus of this repository is the gridsearch for a periodic three dimensional solution to the gravitational three body problem
 ## Use:
